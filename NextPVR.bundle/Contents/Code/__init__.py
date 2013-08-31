@@ -33,9 +33,9 @@ def Start():
 def MainMenu():
 	
     dir=ObjectContainer()
-    Log('Adding Recordings Menu')
-    dir.add(DirectoryObject(key=Callback(RecordingsMenu), title='Recordings'))
-    Log('Recordings Menu Added')
+    Log('Adding What\'s New Menu')
+    dir.add(DirectoryObject(key=Callback(WhatsNewRecordingsMenu), title='What\'s New'))
+    Log('Adding Live Menu')
     dir.add(DirectoryObject(key=Callback(LiveMenu), title='Live'))
     Log('Live Menu Added')
 
@@ -71,10 +71,10 @@ def LiveMenu():
 	)
 	return oc
 
-@route('/video/nextpvr/recordings')
-def RecordingsMenu():
+@route('/video/nextpvr/whatsnewrecordings')
+def WhatsNewRecordingsMenu():
 	Log('Generating Recordings Screen')
-	oc = ObjectContainer(title2='Recordings')
+	oc = ObjectContainer(title2='What\'s New')
 	Log('Calling Recording List')
 	import xml.etree.ElementTree as ET
 	import datetime
@@ -88,50 +88,49 @@ def RecordingsMenu():
 	tree = ET.parse(u)
 	root = tree.getroot()
 	Log('Root = %s'  %  root)
+	# calculating the start date - to be in <start_time>20/01/2012 10:30:00 a.m.</start_time> format
+	newdate = datetime.datetime.now() - datetime.timedelta(days=10)
+	newticks = (newdate - datetime.datetime(1970, 1, 1)).total_seconds()
+	
+	Log('Calculated start date as %s ticks = %d' % (newdate.isoformat(),newticks))
+	# Nodes with start_time > stime which is x number of days ago
 	recordings = root.findall('recordings/recording')
 	for recording in recordings:
 		Log('Recording id %s' % recording.find('id').text)
-		testURL = 'http://pvr.lan:8866/live?recording=%s' % recording.find('id').text
-		Log('Url %s' % testURL)
-		'''
-		oc.add(
-			VideoClipObject(
-				url = testURL,
-				title = recording.find('name').text.encode('utf-8'),
-				summary = recording.find('desc').text.encode('utf-8')
+		startticks = int(recording.find('start_time_ticks').text)
+		if startticks > newticks:
+			testURL = 'http://pvr.lan:8866/live?recording=%s' % recording.find('id').text
+			Log('Url %s' % testURL)
+			'''
+			oc.add(
+				VideoClipObject(
+					url = testURL,
+					title = recording.find('name').text.encode('utf-8'),
+					summary = recording.find('desc').text.encode('utf-8')
+				)
 			)
-		)
-		'''
-		t = datetime.datetime.strptime(recording.find('duration').text,"%H:%M")
-		delta = datetime.timedelta(hours=t.hour, minutes=t.minute, seconds=0)
-		Log('Name  %s' % recording.find('name').text.encode('utf-8'))
-		descr = recording.find('desc').text.encode('utf-8')
-		Log('Desc %s' % descr)
-		oc.add(
-			EpisodeObject(
-				url=testURL, 
-				title=recording.find('name').text.encode('utf-8'),
-				originally_available_at=datetime.datetime.fromtimestamp(float(recording.find('start_time_ticks').text)),
-				duration=int(delta.total_seconds()) * 1000,
-				summary=descr,
-				thumb=R(ART)
+			'''
+			t = datetime.datetime.strptime(recording.find('duration').text,"%H:%M")
+			delta = datetime.timedelta(hours=t.hour, minutes=t.minute, seconds=0)
+			Log('Name  %s' % recording.find('name').text.encode('utf-8'))
+			descr = recording.find('desc').text.strip()
+			Log('Desc %s' % descr)
+			oc.add(
+				EpisodeObject(
+					url=testURL, 
+					title=recording.find('name').text.encode('utf-8'),
+					originally_available_at=datetime.datetime.fromtimestamp(float(recording.find('start_time_ticks').text)),
+					duration=int(delta.total_seconds()) * 1000,
+					summary=descr,
+					thumb=R(ART)
+				)
 			)
-		)
+			
+			Log('Status %s' % recording.find('status').text.encode('utf-8'))
+			Log('Start Time %s' % datetime.datetime.fromtimestamp(float(recording.find('start_time_ticks').text)))
 		
-		Log('Status %s' % recording.find('status').text.encode('utf-8'))
-		Log('Start Time %s' % datetime.datetime.fromtimestamp(float(recording.find('start_time_ticks').text)))
-		
-		'''
-		title = recording.find('name').text.encode('utf-8')
-		thumb = R(ART)
-
-		oc.add(DirectoryObject(
-			key = Callback(Show, show=title, thumb=thumb,root),
-			title = title,
-			thumb = R(ART)
-		))
-		'''
-
+	
+	oc.objects.sort(key=lambda obj: obj.originally_available_at.isoformat(),reverse=True)
 	return oc
 
 def PlayVideo(url):
