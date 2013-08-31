@@ -1,5 +1,5 @@
 # NextPVR
-# Copyright (C) 2011-2012 Rene Koecher <shirk@bitspin.org>
+# Copyright (C) 2013 David Cole github@andc.co.nz
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
