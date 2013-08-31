@@ -14,7 +14,9 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
-
+import xml.etree.ElementTree as ET
+import datetime
+import urllib2
 #=============================================================================
 VIDEO_PREFIX = "/video/nextpvr"
 
@@ -47,7 +49,7 @@ def LiveMenu():
 	
 	testURL = 'http://pvr.lan:8866/live?channel=2'
 	oc.add(
-		VideoClipObject(
+		CreateVideoObject(
 			url = testURL,
 			title = 'Test 1-Live',
 			summary = testURL
@@ -55,7 +57,7 @@ def LiveMenu():
 	)
 	testURL = 'http://pvr.lan:8866/live?recording=18121'
 	oc.add(
-		VideoClipObject(
+		CreateVideoObject(
 			url = testURL,
 			title = 'Test 2-Recorded',
 			summary = testURL
@@ -63,7 +65,7 @@ def LiveMenu():
 	)
 	testURL = 'http://pvr.lan:8866/live?recording=18234'
 	oc.add(
-		VideoClipObject(
+		CreateVideoObject(
 			url = testURL,
 			title = 'Test 3-In progress',
 			summary = testURL
@@ -76,11 +78,8 @@ def WhatsNewRecordingsMenu():
 	Log('Generating Recordings Screen')
 	oc = ObjectContainer(title2='What\'s New')
 	Log('Calling Recording List')
-	import xml.etree.ElementTree as ET
-	import datetime
 	url = "http://pvr.lan:8866/services?method=recording.list&filter=Ready&sid=plex"
 	Log('Loading URL %s' % url)
-	import urllib2
 	request = urllib2.Request(url, headers={"Accept" : "application/xml"})
 	Log('Request: %s' % request)
 	u = urllib2.urlopen(request)
@@ -116,13 +115,12 @@ def WhatsNewRecordingsMenu():
 			descr = recording.find('desc').text.strip()
 			Log('Desc %s' % descr)
 			oc.add(
-				EpisodeObject(
+				CreateVideoObject(
 					url=testURL, 
 					title=recording.find('name').text.encode('utf-8'),
 					originally_available_at=datetime.datetime.fromtimestamp(float(recording.find('start_time_ticks').text)),
 					duration=int(delta.total_seconds()) * 1000,
-					summary=descr,
-					thumb=R(ART)
+					summary=descr
 				)
 			)
 			
@@ -133,6 +131,29 @@ def WhatsNewRecordingsMenu():
 	oc.objects.sort(key=lambda obj: obj.originally_available_at.isoformat(),reverse=True)
 	return oc
 
-def PlayVideo(url):
-	Log('*************************************************************** Video URL --- ' + url)
-	return Redirect(url)
+####################################################################################################
+def CreateVideoObject(url, title, summary, originally_available_at=None, duration=None, include_container=False):
+	track_object = EpisodeObject(
+		key = Callback(CreateVideoObject, url=url, title=title, summary=summary, originally_available_at=originally_available_at, duration=duration, include_container=True),
+		rating_key = url,
+		title = title,
+		summary = summary,
+		originally_available_at = originally_available_at,
+		duration = duration,
+		items = [
+			MediaObject(
+				parts = [
+					PartObject(key=url)
+				],
+				container = 'mp2ts',
+				video_codec = VideoCodec.H264,
+				audio_channels = 2,
+				optimized_for_streaming = True,
+			)
+		]
+	)
+
+	if include_container:
+		return ObjectContainer(objects=[track_object])
+	else:
+		return track_object
