@@ -140,6 +140,7 @@ def CreateVideoObject(url, title, summary, originally_available_at=None, duratio
 		summary = summary,
 		originally_available_at = originally_available_at,
 		duration = duration,
+		thumb = R(ART),
 		items = [
 			MediaObject(
 				parts = [
