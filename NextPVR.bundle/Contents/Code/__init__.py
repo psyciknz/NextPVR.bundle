@@ -22,32 +22,37 @@ VIDEO_PREFIX = "/video/nextpvr"
 
 NAME = "NextPVR"
 ART  = 'item-default.png'
-
+PVR_URL = 'http://%s:%s/' % (Prefs['server'],Prefs['port'])
 #=============================================================================
 
 def Start():
     
 	ObjectContainer.title1 = NAME
-	Log('Started')
+	Log('%s Started' % NAME)
+	#PVR_URL = 'http://%s:%s/' % (Prefs['server'],Prefs['port'])
+	Log('URL set to %s' % PVR_URL)
+	ValidatePrefs()
 
 # This main function will setup the displayed items.
 @handler('/video/nextpvr','NextPVR')
 def MainMenu():
 	
     dir=ObjectContainer()
-    Log('Adding What\'s New Menu')
+    Log('MainMenu: Adding What\'s New Menu')
     dir.add(DirectoryObject(key=Callback(WhatsNewRecordingsMenu), title='What\'s New'))
-    Log('Adding Live Menu')
+    Log('MainMenu: Adding Live Menu')
     dir.add(DirectoryObject(key=Callback(LiveMenu), title='Live'))
-    Log('Live Menu Added')
-
+    Log('MainMenu: Live Menu Added')
+    dir.add(PrefsObject(title="Preferences", summary="Configure how to connect to NextPVR", thumb=R("icon-prefs.png")))
+    Log('MainMenu: URL set to %s' % PVR_URL)
     return dir
 	
 @route('/video/nextpvr/live')
 def LiveMenu():
 	oc = ObjectContainer(title2='Live')
 	
-	testURL = 'http://pvr.lan:8866/live?channel=2'
+	testURL = PVR_URL + 'live?channel=2'
+	Log('LiveMenu: URL set to %s' % testURL)
 	oc.add(
 		CreateVideoObject(
 			url = testURL,
@@ -55,7 +60,7 @@ def LiveMenu():
 			summary = testURL
 		)
 	)
-	testURL = 'http://pvr.lan:8866/live?recording=18121'
+	testURL = PVR_URL + 'live?recording=18121' 
 	oc.add(
 		CreateVideoObject(
 			url = testURL,
@@ -63,7 +68,7 @@ def LiveMenu():
 			summary = testURL
 		)
 	)
-	testURL = 'http://pvr.lan:8866/live?recording=18234'
+	testURL = PVR_URL + 'live?recording=18234'
 	oc.add(
 		CreateVideoObject(
 			url = testURL,
@@ -78,7 +83,7 @@ def WhatsNewRecordingsMenu():
 	Log('Generating Recordings Screen')
 	oc = ObjectContainer(title2='What\'s New')
 	Log('Calling Recording List')
-	url = "http://pvr.lan:8866/services?method=recording.list&filter=Ready&sid=plex"
+	url = PVR_URL + 'services?method=recording.list&filter=Ready&sid=plex'
 	Log('Loading URL %s' % url)
 	request = urllib2.Request(url, headers={"Accept" : "application/xml"})
 	Log('Request: %s' % request)
@@ -114,11 +119,13 @@ def WhatsNewRecordingsMenu():
 			Log('Name  %s' % recording.find('name').text.encode('utf-8'))
 			descr = recording.find('desc').text.strip()
 			Log('Desc %s' % descr)
+			airdate = datetime.datetime.fromtimestamp(float(recording.find('start_time_ticks').text))
+			Log('Air date %s' % airdate.strftime('%c'))
 			oc.add(
 				CreateVideoObject(
 					url=testURL, 
-					title=recording.find('name').text.encode('utf-8'),
-					originally_available_at=datetime.datetime.fromtimestamp(float(recording.find('start_time_ticks').text)),
+					title='%s - %s' % (recording.find('name').text.encode('utf-8'),airdate.strftime('%Y-%m-%d')),
+					originally_available_at=airdate,
 					duration=int(delta.total_seconds()) * 1000,
 					summary=descr
 				)
@@ -158,3 +165,20 @@ def CreateVideoObject(url, title, summary, originally_available_at=None, duratio
 		return ObjectContainer(objects=[track_object])
 	else:
 		return track_object
+
+####################################################################################################
+def ValidatePrefs():
+    
+	if Prefs['server'] is None:
+		return MessageContainer("Error", "No server information entered.")
+	elif Prefs['port'] is None:
+		return MessageContainer("Error", "Server port is not defined")
+	elif not Prefs['port'].isdigit():
+		return MessageContainer("Error", "Server port is not numeric")
+	else:
+		port = Prefs['port']
+		PVR_URL = 'http://%s:%s/' % (Prefs['server'],port)
+		Log('PVR URL = %s' % PVR_URL)
+		#return MessageContainer("Success","Success")
+
+####################################################################################################
