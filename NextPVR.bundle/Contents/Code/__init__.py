@@ -41,8 +41,10 @@ def MainMenu():
     Log('MainMenu: Adding What\'s New Menu')
     dir.add(DirectoryObject(key=Callback(WhatsNewRecordingsMenu), title='What\'s New'))
     Log('MainMenu: Adding Live Menu')
-    dir.add(DirectoryObject(key=Callback(LiveMenu), title='Live'))
-    Log('MainMenu: Live Menu Added')
+    #dir.add(DirectoryObject(key=Callback(LiveMenu), title='Live'))
+    dir.add(DirectoryObject(key=Callback(RecordingsMenu), title='Recordings'))
+
+    #Log('MainMenu: Live Menu Added')
     dir.add(PrefsObject(title="Preferences", summary="Configure how to connect to NextPVR", thumb=R("icon-prefs.png")))
     Log('MainMenu: URL set to %s' % PVR_URL)
     return dir
@@ -103,6 +105,7 @@ def WhatsNewRecordingsMenu():
 		Log('Recording id %s' % recording.find('id').text)
 		startticks = int(recording.find('start_time_ticks').text)
 		if startticks > newticks:
+			Log('**********************************************************************************************************')
 			testURL = 'http://pvr.lan:8866/live?recording=%s' % recording.find('id').text
 			Log('Url %s' % testURL)
 			'''
@@ -120,14 +123,15 @@ def WhatsNewRecordingsMenu():
 			descr = recording.find('desc').text.strip()
 			Log('Desc %s' % descr)
 			airdate = datetime.datetime.fromtimestamp(float(recording.find('start_time_ticks').text))
-			Log('Air date %s' % airdate.strftime('%c'))
+			Log('Air date %s in iso format:%d' % (airdate.strftime('%c'),int(airdate.strftime('%Y%m%d%H%M'))))
 			oc.add(
 				CreateVideoObject(
 					url=testURL, 
 					title='%s - %s' % (recording.find('name').text.encode('utf-8'),airdate.strftime('%Y-%m-%d')),
 					originally_available_at=airdate,
 					duration=int(delta.total_seconds()) * 1000,
-					summary=descr
+					summary=descr,
+					rating_key=int(airdate.strftime('%Y%m%d%H%M'))
 				)
 			)
 			
@@ -135,18 +139,82 @@ def WhatsNewRecordingsMenu():
 			Log('Start Time %s' % datetime.datetime.fromtimestamp(float(recording.find('start_time_ticks').text)))
 		
 	
-	oc.objects.sort(key=lambda obj: obj.originally_available_at.isoformat(),reverse=True)
+	oc.objects.sort(key=lambda obj: obj.rating_key,reverse=True)
+	#oc.objects.sort(key=lambda obj: obj.url,reverse=True)
+	return oc
+
+@route('/video/nextpvr/recordings')
+def RecordingsMenu():
+	Log('Generating Recordings Screen')
+	oc = ObjectContainer(title2='Recordings')
+	Log('Calling Recording List')
+	url = PVR_URL + 'services?method=recording.list&filter=Ready&sid=plex'
+	Log('Loading URL %s' % url)
+	request = urllib2.Request(url, headers={"Accept" : "application/xml"})
+	Log('Request: %s' % request)
+	u = urllib2.urlopen(request)
+	Log('Result = %s code= %s' % ( u.code,u.msg))
+	tree = ET.parse(u)
+	root = tree.getroot()
+	Log('Root = %s'  %  root)
+	
+	# Nodes with start_time > stime which is x number of days ago
+	recordings = root.findall('recordings/recording')
+	showSet = {}
+	for recording in recordings:
+		Log('**********************************************************************************************************')
+		showname = recording.find('name').text
+		Log('Recording id %s name is \'%s\'' % (recording.find('id').text,showname))
+		showDir = DirectoryObject(title=showname)
+		if showDir not in showSet:
+			Log('Adding %s to showset and Directory' % showname)
+			showSet[showname] = showDir
+			oc.add(showDir)
+		else:
+			Log('Retrieving %s from showSet' % showname)
+			showDir = showSet[showname]
+	
+		if showDir is not None:
+			Log('Adding Episode to Showset %s' % showname)
+			showDir.add(
+				key = Callback(AddEpisodeObject(
+					url='http://pvr.lan:8866/live?recording=%s' % recording.find('id').text,
+					title=showname,
+					originally_available_at=airdate,
+					duration=int(delta.total_seconds()) * 1000,
+					summary=descr,
+					rating_key=int(airdate.strftime('%Y%m%d%H%M'))
+				))
+			)
+	
+	
+	Log('Finished adding Episodes')		
+	return oc
+
+def AddEpisodeObject(url, title, summary, rating_key, originally_available_at=None, duration=None):
+	oc = ObjectContainer(title2=title)
+	oc.add(
+		CreateVideoObject(
+			url=testURL, 
+			title=airdate.strftime('%Y-%m-%d'),
+			originally_available_at=airdate,
+			duration=int(delta.total_seconds()) * 1000,
+			summary=descr,
+			rating_key=int(airdate.strftime('%Y%m%d%H%M'))
+		)
+	)
 	return oc
 
 ####################################################################################################
-def CreateVideoObject(url, title, summary, originally_available_at=None, duration=None, include_container=False):
+@route('video/nextpvr/createclip')
+def CreateVideoObject(url, title, summary, rating_key, originally_available_at=None, duration=None, include_container=False):
 	track_object = EpisodeObject(
-		key = Callback(CreateVideoObject, url=url, title=title, summary=summary, originally_available_at=originally_available_at, duration=duration, include_container=True),
-		rating_key = url,
+		key = Callback(CreateVideoObject, url=url, title=title, summary=summary, rating_key=rating_key,originally_available_at=originally_available_at, duration=duration, include_container=True),
 		title = title,
 		summary = summary,
 		originally_available_at = originally_available_at,
 		duration = duration,
+		rating_key=rating_key,
 		thumb = R(ART),
 		items = [
 			MediaObject(
