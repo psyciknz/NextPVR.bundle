@@ -160,59 +160,68 @@ def RecordingsMenu():
 	
 	# Nodes with start_time > stime which is x number of days ago
 	recordings = root.findall('recordings/recording')
-	showSet = {}
+	shows = []
 	for recording in recordings:
 		Log('**********************************************************************************************************')
 		showname = recording.find('name').text
 		Log('Recording id %s name is \'%s\'' % (recording.find('id').text,showname))
-		showDir = DirectoryObject(title=showname)
-		if showDir not in showSet:
+		if showname not in shows:
 			Log('Adding %s to showset and Directory' % showname)
-			showSet[showname] = showDir
-			oc.add(showDir)
-		else:
-			Log('Retrieving %s from showSet' % showname)
-			showDir = showSet[showname]
+			shows.append(showname)
+			oc.add(DirectoryObject(key=Callback(AddEpisodeObject, show_title=showname), title=showname))
+		
 	
-		if showDir is not None:
-			Log('Adding Episode to Showset %s' % showname)
-			showDir.add(
-				key = Callback(AddEpisodeObject(
+	oc.objects.sort(key=lambda obj: obj.title)
+	Log('Finished adding Episodes')		
+	return oc
+
+def AddEpisodeObject(show_title):
+	oc = ObjectContainer(title2=show_title)
+	url = PVR_URL + 'services?method=recording.list&filter=Ready&sid=plex'
+	Log('AddEpisodeObject: Loading URL %s' % url)
+	request = urllib2.Request(url, headers={"Accept" : "application/xml"})
+	Log('Request: %s' % request)
+	u = urllib2.urlopen(request)
+	Log('Result = %s code= %s' % ( u.code,u.msg))
+	tree = ET.parse(u)
+	root = tree.getroot()
+	Log('Root = %s'  %  root)
+	
+	# Nodes with start_time > stime which is x number of days ago
+	recordings = root.findall('recordings/recording')
+	for recording in recordings:
+		showname = recording.find('name').text
+		if showname == show_title:
+			Log('**********************************************************************************************************')
+			t = datetime.datetime.strptime(recording.find('duration').text,"%H:%M")
+			delta = datetime.timedelta(hours=t.hour, minutes=t.minute, seconds=0)
+			Log('Name  %s' % recording.find('name').text.encode('utf-8'))
+			descr = recording.find('desc').text.strip()
+			Log('Desc %s' % descr)
+			airdate = datetime.datetime.fromtimestamp(float(recording.find('start_time_ticks').text))
+			Log('Air date %s in iso format:%d' % (airdate.strftime('%c'),int(airdate.strftime('%Y%m%d%H%M'))))
+			oc.add(
+				CreateVideoObject(
 					url='http://pvr.lan:8866/live?recording=%s' % recording.find('id').text,
-					title=showname,
+					title=airdate.strftime('%Y-%m-%d'),
 					originally_available_at=airdate,
 					duration=int(delta.total_seconds()) * 1000,
 					summary=descr,
 					rating_key=int(airdate.strftime('%Y%m%d%H%M'))
-				))
+				)
 			)
-	
-	
-	Log('Finished adding Episodes')		
-	return oc
-
-def AddEpisodeObject(url, title, summary, rating_key, originally_available_at=None, duration=None):
-	oc = ObjectContainer(title2=title)
-	oc.add(
-		CreateVideoObject(
-			url=testURL, 
-			title=airdate.strftime('%Y-%m-%d'),
-			originally_available_at=airdate,
-			duration=int(delta.total_seconds()) * 1000,
-			summary=descr,
-			rating_key=int(airdate.strftime('%Y%m%d%H%M'))
-		)
-	)
+	oc.objects.sort(key=lambda obj: obj.rating_key,reverse=False)
 	return oc
 
 ####################################################################################################
-@route('video/nextpvr/createclip')
 def CreateVideoObject(url, title, summary, rating_key, originally_available_at=None, duration=None, include_container=False):
+	Log('Date %s ' % originally_available_at)
 	track_object = EpisodeObject(
 		key = Callback(CreateVideoObject, url=url, title=title, summary=summary, rating_key=rating_key,originally_available_at=originally_available_at, duration=duration, include_container=True),
 		title = title,
 		summary = summary,
 		originally_available_at = originally_available_at,
+		
 		duration = duration,
 		rating_key=rating_key,
 		thumb = R(ART),
@@ -224,7 +233,7 @@ def CreateVideoObject(url, title, summary, rating_key, originally_available_at=N
 				container = 'mp2ts',
 				video_codec = VideoCodec.H264,
 				audio_channels = 2,
-				optimized_for_streaming = True,
+				optimized_for_streaming = True
 			)
 		]
 	)
