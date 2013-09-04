@@ -109,23 +109,33 @@ def WhatsNewRecordingsMenu():
 		startticks = int(recording.find('start_time_ticks').text)
 		if startticks > newticks:
 			Log('**********************************************************************************************************')
-			testURL = PVR_URL + '/live?recording=%s' % recording.find('id').text
-			Log('Url %s' % testURL)
-			'''
-			oc.add(
-				VideoClipObject(
-					url = testURL,
-					title = recording.find('name').text.encode('utf-8'),
-					summary = recording.find('desc').text.encode('utf-8')
-				)
-			)
-			'''
-			t = datetime.datetime.strptime(recording.find('duration').text,"%H:%M")
-			delta = datetime.timedelta(hours=t.hour, minutes=t.minute, seconds=0)
+			testURL = PVR_URL + 'live?recording=%s' % recording.find('id').text
+			
 			Log('Name  %s' % recording.find('name').text.encode('utf-8'))
-			descr = recording.find('desc').text.strip()
-			Log('Desc %s' % descr)
-			airdate = datetime.datetime.fromtimestamp(float(recording.find('start_time_ticks').text))
+			showname = recording.find('name').text
+			Log('Url %s' % testURL)
+			
+			#add duration of video
+			try:
+				t = datetime.datetime.strptime(recording.find('duration').text,"%H:%M")
+				delta = datetime.timedelta(hours=t.hour, minutes=t.minute, seconds=0)
+			except:
+				Log('Recording: "%s", Duration error, Unexpected error: %s' % (showname, sys.exc_info()[0]))
+				delta = datetime.timedelta(hours=1, minutes=0,seconds=0)
+			Log('Duration Set to "%d"' % delta.total_seconds())
+			# Added test for empty description
+			try:
+				descr = recording.find('desc').text.strip()
+			except:
+				Log('Recording: "%s", Descr error, Unexpected error: %s' % (showname, sys.exc_info()[0]))
+				descr = showname
+			Log('Desc Set to "%s"' % descr)
+			#Added try/Catch for dates
+			try:
+				airdate = datetime.datetime.fromtimestamp(float(recording.find('start_time_ticks').text))
+			except:
+				Log('Recording: "%s", AirTime error, Unexpected error: %s' % (showname, sys.exc_info()[0]))
+				airdate = datetime.datetime.now()
 			Log('Air date %s in iso format:%d' % (airdate.strftime('%c'),int(airdate.strftime('%Y%m%d%H%M'))))
 			oc.add(
 				CreateVideoObject(
@@ -198,16 +208,37 @@ def AddEpisodeObject(show_title):
 		showname = recording.find('name').text
 		if showname == show_title:
 			Log('**********************************************************************************************************')
-			t = datetime.datetime.strptime(recording.find('duration').text,"%H:%M")
-			delta = datetime.timedelta(hours=t.hour, minutes=t.minute, seconds=0)
-			Log('Name  %s' % recording.find('name').text.encode('utf-8'))
-			descr = recording.find('desc').text.strip()
-			Log('Desc %s' % descr)
-			airdate = datetime.datetime.fromtimestamp(float(recording.find('start_time_ticks').text))
+			Log('Name  %s' % showname)
+
+			#add duration of video
+			try:
+				t = datetime.datetime.strptime(recording.find('duration').text,"%H:%M")
+				delta = datetime.timedelta(hours=t.hour, minutes=t.minute, seconds=0)
+			except:
+				Log('Recording: "%s", Duration error, Unexpected error: %s' % (showname, sys.exc_info()[0]))
+				delta = datetime.timedelta(hours=1, minutes=0,seconds=0)
+			Log('Duration Set to "%d"' % delta.total_seconds())
+			
+			# Added test for empty description
+			try:
+				descr = recording.find('desc').text.strip()
+			except:
+				Log('Recording: "%s", Descr error, Unexpected error: %s' % (showname, sys.exc_info()[0]))
+				descr = showname
+			Log('Desc Set to "%s"' % descr)
+
+			#Added try/Catch for dates
+			try:
+				airdate = datetime.datetime.fromtimestamp(float(recording.find('start_time_ticks').text))
+			except:
+				Log('Recording: "%s", AirTime error, Unexpected error: %s' % (showname, sys.exc_info()[0]))
+				airdate = datetime.datetime.now()
+
 			Log('Air date %s in iso format:%d' % (airdate.strftime('%c'),int(airdate.strftime('%Y%m%d%H%M'))))
+
 			oc.add(
 				CreateVideoObject(
-					url=PVR_URL + '/live?recording=%s' % recording.find('id').text,
+					url=PVR_URL + 'live?recording=%s' % recording.find('id').text,
 					title=airdate.strftime('%Y-%m-%d'),
 					summary=descr,
 					rating_key=int(airdate.strftime('%Y%m%d%H%M')),
@@ -219,6 +250,7 @@ def AddEpisodeObject(show_title):
 	return oc
 
 ####################################################################################################
+@route('/video/nextpvr/videoobject', originally_available_at=datetime)
 def CreateVideoObject(url, title, summary, rating_key, originally_available_at=None, duration=None, include_container=False):
 	Log('Date %s ' % originally_available_at)
 	track_object = EpisodeObject(
