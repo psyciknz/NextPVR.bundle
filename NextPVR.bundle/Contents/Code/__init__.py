@@ -17,13 +17,13 @@
 import xml.etree.ElementTree as ET
 import datetime
 import urllib2
-#=============================================================================
+####################################################################################################
 VIDEO_PREFIX = "/video/nextpvr"
 
 NAME = "NextPVR"
 ART  = 'item-default.png'
 PVR_URL = 'http://%s:%s/' % (Prefs['server'],Prefs['port'])
-#=============================================================================
+####################################################################################################
 
 def Start():
     
@@ -33,6 +33,7 @@ def Start():
 	Log('URL set to %s' % PVR_URL)
 	ValidatePrefs()
 
+####################################################################################################
 # This main function will setup the displayed items.
 @handler('/video/nextpvr','NextPVR')
 def MainMenu():
@@ -48,7 +49,8 @@ def MainMenu():
     dir.add(PrefsObject(title="Preferences", summary="Configure how to connect to NextPVR", thumb=R("icon-prefs.png")))
     Log('MainMenu: URL set to %s' % PVR_URL)
     return dir
-	
+
+####################################################################################################	
 @route('/video/nextpvr/live')
 def LiveMenu():
 	oc = ObjectContainer(title2='Live')
@@ -80,6 +82,7 @@ def LiveMenu():
 	)
 	return oc
 
+####################################################################################################
 @route('/video/nextpvr/whatsnewrecordings')
 def WhatsNewRecordingsMenu():
 	Log('Generating Recordings Screen')
@@ -106,7 +109,7 @@ def WhatsNewRecordingsMenu():
 		startticks = int(recording.find('start_time_ticks').text)
 		if startticks > newticks:
 			Log('**********************************************************************************************************')
-			testURL = 'http://pvr.lan:8866/live?recording=%s' % recording.find('id').text
+			testURL = PVR_URL '/live?recording=%s' % recording.find('id').text
 			Log('Url %s' % testURL)
 			'''
 			oc.add(
@@ -143,6 +146,7 @@ def WhatsNewRecordingsMenu():
 	#oc.objects.sort(key=lambda obj: obj.url,reverse=True)
 	return oc
 
+####################################################################################################
 @route('/video/nextpvr/recordings')
 def RecordingsMenu():
 	Log('Generating Recordings Screen')
@@ -175,6 +179,7 @@ def RecordingsMenu():
 	Log('Finished adding Episodes')		
 	return oc
 
+####################################################################################################
 def AddEpisodeObject(show_title):
 	oc = ObjectContainer(title2=show_title)
 	url = PVR_URL + 'services?method=recording.list&filter=Ready&sid=plex'
@@ -202,12 +207,12 @@ def AddEpisodeObject(show_title):
 			Log('Air date %s in iso format:%d' % (airdate.strftime('%c'),int(airdate.strftime('%Y%m%d%H%M'))))
 			oc.add(
 				CreateVideoObject(
-					url='http://pvr.lan:8866/live?recording=%s' % recording.find('id').text,
+					url=PVR_URL + '/live?recording=%s' % recording.find('id').text,
 					title=airdate.strftime('%Y-%m-%d'),
-					originally_available_at=airdate,
-					duration=int(delta.total_seconds()) * 1000,
 					summary=descr,
-					rating_key=int(airdate.strftime('%Y%m%d%H%M'))
+					rating_key=int(airdate.strftime('%Y%m%d%H%M')),
+					originally_available_at=airdate,
+					duration=int(delta.total_seconds()) * 1000
 				)
 			)
 	oc.objects.sort(key=lambda obj: obj.rating_key,reverse=False)
