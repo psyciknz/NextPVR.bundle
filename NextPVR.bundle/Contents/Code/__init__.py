@@ -109,7 +109,7 @@ def WhatsNewRecordingsMenu():
 		startticks = int(recording.find('start_time_ticks').text)
 		if startticks > newticks:
 			Log('**********************************************************************************************************')
-			testURL = PVR_URL '/live?recording=%s' % recording.find('id').text
+			testURL = PVR_URL + '/live?recording=%s' % recording.find('id').text
 			Log('Url %s' % testURL)
 			'''
 			oc.add(
