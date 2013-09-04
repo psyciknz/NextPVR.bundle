@@ -268,8 +268,8 @@ def CreateVideoObject(url, title, summary, rating_key, originally_available_at=N
 					PartObject(key=url)
 				],
 				container = 'mp2ts',
-				video_codec = VideoCodec.H264,
-				audio_channels = 2,
+				#video_codec = VideoCodec.H264,
+				#audio_channels = 2,
 				optimized_for_streaming = True
 			)
 		]
