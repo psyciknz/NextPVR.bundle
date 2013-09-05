@@ -85,108 +85,68 @@ def LiveMenu():
 ####################################################################################################
 @route('/video/nextpvr/whatsnewrecordings')
 def WhatsNewRecordingsMenu():
-	Log('Generating Recordings Screen')
+	Log('WhatsNewRecordingsMenu: Generating WhatsNewRecordingsMenu Screen')
 	oc = ObjectContainer(title2='What\'s New')
-	Log('Calling Recording List')
+	Log('WhatsNewRecordingsMenu: Calling Recording List')
 	url = PVR_URL + 'services?method=recording.list&filter=Ready&sid=plex'
 	Log('Loading URL %s' % url)
 	request = urllib2.Request(url, headers={"Accept" : "application/xml"})
-	Log('Request: %s' % request)
+	Log('WhatsNewRecordingsMenu: Request: %s' % request)
 	u = urllib2.urlopen(request)
-	Log('Result = %s code= %s' % ( u.code,u.msg))
+	Log('WhatsNewRecordingsMenu: Result = %s code= %s' % ( u.code,u.msg))
 	tree = ET.parse(u)
 	root = tree.getroot()
-	Log('Root = %s'  %  root)
+	
 	# calculating the start date - to be in <start_time>20/01/2012 10:30:00 a.m.</start_time> format
 	newdate = datetime.datetime.now() - datetime.timedelta(days=10)
 	newticks = (newdate - datetime.datetime(1970, 1, 1)).total_seconds()
 	
-	Log('Calculated start date as %s ticks = %d' % (newdate.isoformat(),newticks))
+	Log('WhatsNewRecordingsMenu: Calculated start date as %s ticks = %d' % (newdate.isoformat(),newticks))
 	# Nodes with start_time > stime which is x number of days ago
 	recordings = root.findall('recordings/recording')
 	for recording in recordings:
-		Log('Recording id %s' % recording.find('id').text)
+		Log('WhatsNewRecordingsMenu: Recording id %s' % recording.find('id').text)
 		startticks = int(recording.find('start_time_ticks').text)
 		if startticks > newticks:
-			Log('**********************************************************************************************************')
-			testURL = PVR_URL + 'live?recording=%s' % recording.find('id').text
-			
-			Log('Name  %s' % recording.find('name').text.encode('utf-8'))
-			showname = recording.find('name').text
-			Log('Url %s' % testURL)
-			
-			#add duration of video
-			try:
-				t = datetime.datetime.strptime(recording.find('duration').text,"%H:%M")
-				delta = datetime.timedelta(hours=t.hour, minutes=t.minute, seconds=0)
-			except:
-				Log('Recording: "%s", Duration error, Unexpected error: %s' % (showname, sys.exc_info()[0]))
-				delta = datetime.timedelta(hours=1, minutes=0,seconds=0)
-			Log('Duration Set to "%d"' % delta.total_seconds())
-			# Added test for empty description
-			try:
-				descr = recording.find('desc').text.strip()
-			except:
-				Log('Recording: "%s", Descr error, Unexpected error: %s' % (showname, sys.exc_info()[0]))
-				descr = showname
-			Log('Desc Set to "%s"' % descr)
-			#Added try/Catch for dates
-			try:
-				airdate = datetime.datetime.fromtimestamp(float(recording.find('start_time_ticks').text))
-			except:
-				Log('Recording: "%s", AirTime error, Unexpected error: %s' % (showname, sys.exc_info()[0]))
-				airdate = datetime.datetime.now()
-			Log('Air date %s in iso format:%d' % (airdate.strftime('%c'),int(airdate.strftime('%Y%m%d%H%M'))))
-			oc.add(
-				CreateVideoObject(
-					url=testURL, 
-					title='%s - %s' % (recording.find('name').text.encode('utf-8'),airdate.strftime('%Y-%m-%d')),
-					originally_available_at=airdate,
-					duration=int(delta.total_seconds()) * 1000,
-					summary=descr,
-					rating_key=int(airdate.strftime('%Y%m%d%H%M'))
-				)
-			)
-			
-			Log('Status %s' % recording.find('status').text.encode('utf-8'))
-			Log('Start Time %s' % datetime.datetime.fromtimestamp(float(recording.find('start_time_ticks').text)))
+			oc.add(ConvertRecordingToEpisode(recording,dateasname=False))
+			Log('WhatsNewRecordingsMenu: Status %s' % recording.find('status').text.encode('utf-8'))
 		
 	
 	oc.objects.sort(key=lambda obj: obj.rating_key,reverse=True)
+	Log('WhatsNewRecordingsMenu: Completed WhatsNewRecording Menu')
 	#oc.objects.sort(key=lambda obj: obj.url,reverse=True)
 	return oc
 
 ####################################################################################################
 @route('/video/nextpvr/recordings')
 def RecordingsMenu():
-	Log('Generating Recordings Screen')
+	Log('RecordingsMenu: Generating Recordings Screen')
 	oc = ObjectContainer(title2='Recordings')
-	Log('Calling Recording List')
+	Log('RecordingsMenu: Calling Recording List')
 	url = PVR_URL + 'services?method=recording.list&filter=Ready&sid=plex'
-	Log('Loading URL %s' % url)
+	Log('RecordingsMenu: Loading URL %s' % url)
 	request = urllib2.Request(url, headers={"Accept" : "application/xml"})
-	Log('Request: %s' % request)
+	Log('RecordingsMenu: Request: %s' % request)
 	u = urllib2.urlopen(request)
-	Log('Result = %s code= %s' % ( u.code,u.msg))
+	Log('RecordingsMenu: Result = %s code= %s' % ( u.code,u.msg))
 	tree = ET.parse(u)
 	root = tree.getroot()
-	Log('Root = %s'  %  root)
 	
 	# Nodes with start_time > stime which is x number of days ago
 	recordings = root.findall('recordings/recording')
 	shows = []
 	for recording in recordings:
-		Log('**********************************************************************************************************')
+		Log('RecordingsMenu: **********************************************************************************************************')
 		showname = recording.find('name').text
-		Log('Recording id %s name is \'%s\'' % (recording.find('id').text,showname))
+		Log('RecordingsMenu: Recording id %s name is \'%s\'' % (recording.find('id').text,showname))
 		if showname not in shows:
-			Log('Adding %s to showset and Directory' % showname)
+			Log('RecordingsMenu: Adding %s to showset and Directory' % showname)
 			shows.append(showname)
 			oc.add(DirectoryObject(key=Callback(AddEpisodeObject, show_title=showname), title=showname))
 		
 	
 	oc.objects.sort(key=lambda obj: obj.title)
-	Log('Finished adding Episodes')		
+	Log('RecordingsMenu: Finished adding Episodes')		
 	return oc
 
 ####################################################################################################
@@ -197,7 +157,7 @@ def AddEpisodeObject(show_title):
 	request = urllib2.Request(url, headers={"Accept" : "application/xml"})
 	Log('Request: %s' % request)
 	u = urllib2.urlopen(request)
-	Log('Result = %s code= %s' % ( u.code,u.msg))
+	Log('AddEpisodeObject: Result = %s code= %s' % ( u.code,u.msg))
 	tree = ET.parse(u)
 	root = tree.getroot()
 	Log('Root = %s'  %  root)
@@ -207,45 +167,8 @@ def AddEpisodeObject(show_title):
 	for recording in recordings:
 		showname = recording.find('name').text
 		if showname == show_title:
-			Log('**********************************************************************************************************')
-			Log('Name  %s' % showname)
+			oc.add(ConvertRecordingToEpisode(recording,dateasname=True))
 
-			#add duration of video
-			try:
-				t = datetime.datetime.strptime(recording.find('duration').text,"%H:%M")
-				delta = datetime.timedelta(hours=t.hour, minutes=t.minute, seconds=0)
-			except:
-				Log('Recording: "%s", Duration error, Unexpected error: %s' % (showname, sys.exc_info()[0]))
-				delta = datetime.timedelta(hours=1, minutes=0,seconds=0)
-			Log('Duration Set to "%d"' % delta.total_seconds())
-			
-			# Added test for empty description
-			try:
-				descr = recording.find('desc').text.strip()
-			except:
-				Log('Recording: "%s", Descr error, Unexpected error: %s' % (showname, sys.exc_info()[0]))
-				descr = showname
-			Log('Desc Set to "%s"' % descr)
-
-			#Added try/Catch for dates
-			try:
-				airdate = datetime.datetime.fromtimestamp(float(recording.find('start_time_ticks').text))
-			except:
-				Log('Recording: "%s", AirTime error, Unexpected error: %s' % (showname, sys.exc_info()[0]))
-				airdate = datetime.datetime.now()
-
-			Log('Air date %s in iso format:%d' % (airdate.strftime('%c'),int(airdate.strftime('%Y%m%d%H%M'))))
-
-			oc.add(
-				CreateVideoObject(
-					url=PVR_URL + 'live?recording=%s' % recording.find('id').text,
-					title=airdate.strftime('%Y-%m-%d'),
-					summary=descr,
-					rating_key=int(airdate.strftime('%Y%m%d%H%M')),
-					originally_available_at=airdate,
-					duration=int(delta.total_seconds()) * 1000
-				)
-			)
 	oc.objects.sort(key=lambda obj: obj.rating_key,reverse=False)
 	return oc
 
@@ -296,3 +219,52 @@ def ValidatePrefs():
 		#return MessageContainer("Success","Success")
 
 ####################################################################################################
+def ConvertRecordingToEpisode(recording, dateasname):
+	showname = recording.find('name').text
+	Log('**********************************************************************************************************')
+
+	#set the show name
+	epname = showname
+
+	testURL = PVR_URL + 'live?recording=%s' % recording.find('id').text
+	Log('ConvertRecordingToEpisode: Name  "%s" URL="%s"' % (showname,testURL))
+	#add duration of video
+	try:
+		t = datetime.datetime.strptime(recording.find('duration').text,"%H:%M")
+		delta = datetime.timedelta(hours=t.hour, minutes=t.minute, seconds=0)
+	except:
+		Warning('ConvertRecordingToEpisode: Recording: "%s", Duration error, Unexpected error: %s' % showname)
+		delta = datetime.timedelta(hours=1, minutes=0,seconds=0)
+	Log('ConvertRecordingToEpisode: Duration Set to "%d"' % delta.total_seconds())
+	
+	# Added test for empty description
+	try:
+		descr = recording.find('desc').text.strip()
+	except:
+		Warning('ConvertRecordingToEpisode: Recording: "%s", Descr error, Unexpected error: %s' % showname)
+		descr = showname
+	Log('ConvertRecordingToEpisode: Desc Set to "%s"' % descr)
+
+	#Added try/Catch for dates
+	try:
+		airdate = datetime.datetime.fromtimestamp(float(recording.find('start_time_ticks').text))
+	except:
+		Warning('ConvertRecordingToEpisode: Recording: "%s", AirTime error, Unexpected error: %s' % showname)
+		airdate = datetime.datetime.now()
+
+	if dateasname:
+		epname = airdate.strftime('%Y-%m-%d')
+	else:
+		epname = showname + ' - ' + airdate.strftime('%Y-%m-%d')
+
+	Log('ConvertRecordingToEpisode: Setting episode name to date "%s"' % epname)
+
+	Log('ConvertRecordingToEpisode: Air date %s in iso format:%d' % (airdate.strftime('%c'),int(airdate.strftime('%Y%m%d%H%M'))))
+	return CreateVideoObject(
+		url=testURL,
+		title=epname,
+		summary=descr,
+		rating_key=int(airdate.strftime('%Y%m%d%H%M')),
+		originally_available_at=airdate,
+		duration=int(delta.total_seconds()) * 1000
+	)
