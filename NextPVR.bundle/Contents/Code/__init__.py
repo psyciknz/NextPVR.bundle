@@ -175,17 +175,17 @@ def AddEpisodeObject(show_title):
 	return oc
 
 ####################################################################################################
-@route('/video/nextpvr/videoobject', originally_available_at=datetime)
+@route('/video/nextpvr/videoobject')
 def CreateVideoObject(url, title, summary, rating_key, originally_available_at=None, duration=None, include_container=False):
 	Log('Date %s ' % originally_available_at)
 	track_object = EpisodeObject(
 		key = Callback(CreateVideoObject, url=url, title=title, summary=summary, rating_key=rating_key,originally_available_at=originally_available_at, duration=duration, include_container=True),
 		title = title,
 		summary = summary,
-		originally_available_at = originally_available_at,
+		originally_available_at = Datetime.ParseDate(originally_available_at),
 		
-		duration = duration,
-		rating_key=rating_key,
+		duration = int(duration),
+		rating_key=int(rating_key),
 		thumb = R(ART),
 		items = [
 			MediaObject(
@@ -207,7 +207,7 @@ def CreateVideoObject(url, title, summary, rating_key, originally_available_at=N
 
 ####################################################################################################
 def ValidatePrefs():
-    
+	global PVR_URL
 	if Prefs['server'] is None:
 		return MessageContainer("Error", "No server information entered.")
 	elif Prefs['port'] is None:
@@ -217,8 +217,8 @@ def ValidatePrefs():
 	else:
 		port = Prefs['port']
 		PVR_URL = 'http://%s:%s/' % (Prefs['server'],port)
-		Log('PVR URL = %s' % PVR_URL)
-		#return MessageContainer("Success","Success")
+		Log('ValidatePrefs: PVR URL = %s' % PVR_URL)
+		return MessageContainer("Success","Success")
 
 ####################################################################################################
 def ConvertRecordingToEpisode(recording, dateasname):
@@ -266,7 +266,7 @@ def ConvertRecordingToEpisode(recording, dateasname):
 		url=testURL,
 		title=epname,
 		summary=descr,
-		rating_key=int(airdate.strftime('%Y%m%d%H%M')),
-		originally_available_at=airdate,
-		duration=int(delta.total_seconds()) * 1000
+		rating_key=str(int(airdate.strftime('%Y%m%d%H%M'))),
+		originally_available_at=airdate.strftime('%c'),
+		duration=str(int(delta.total_seconds() * 1000))
 	)
