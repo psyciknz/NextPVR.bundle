@@ -98,10 +98,12 @@ def WhatsNewRecordingsMenu():
 	root = tree.getroot()
 	
 	# calculating the start date - to be in <start_time>20/01/2012 10:30:00 a.m.</start_time> format
-	newdate = datetime.datetime.now() - datetime.timedelta(days=10)
-	newticks = (newdate - datetime.datetime(1970, 1, 1)).total_seconds()
+	whatsnewdays = int(Prefs['whatsnewdays'])
 	
-	Log('WhatsNewRecordingsMenu: Calculated start date as %s ticks = %d' % (newdate.isoformat(),newticks))
+	newdate = datetime.datetime.now() - datetime.timedelta(days=whatsnewdays)
+	newticks = (newdate - datetime.datetime(1970, 1, 1)).total_seconds()
+	Log('WhatsNewRecordingsMenu: Calculated start date "%d" days ago as "%s" ticks = %d' % (whatsnewdays,newdate.isoformat(),newticks))
+
 	# Nodes with start_time > stime which is x number of days ago
 	recordings = root.findall('recordings/recording')
 	for recording in recordings:
@@ -233,7 +235,7 @@ def ConvertRecordingToEpisode(recording, dateasname):
 		t = datetime.datetime.strptime(recording.find('duration').text,"%H:%M")
 		delta = datetime.timedelta(hours=t.hour, minutes=t.minute, seconds=0)
 	except:
-		Warning('ConvertRecordingToEpisode: Recording: "%s", Duration error, Unexpected error: %s' % showname)
+		Warning('ConvertRecordingToEpisode: Recording: "%s", Duration error, Unexpected error' % showname)
 		delta = datetime.timedelta(hours=1, minutes=0,seconds=0)
 	Log('ConvertRecordingToEpisode: Duration Set to "%d"' % delta.total_seconds())
 	
@@ -241,7 +243,7 @@ def ConvertRecordingToEpisode(recording, dateasname):
 	try:
 		descr = recording.find('desc').text.strip()
 	except:
-		Warning('ConvertRecordingToEpisode: Recording: "%s", Descr error, Unexpected error: %s' % showname)
+		Warning('ConvertRecordingToEpisode: Recording: "%s", Descr error, Unexpected error' % showname)
 		descr = showname
 	Log('ConvertRecordingToEpisode: Desc Set to "%s"' % descr)
 
@@ -249,7 +251,7 @@ def ConvertRecordingToEpisode(recording, dateasname):
 	try:
 		airdate = datetime.datetime.fromtimestamp(float(recording.find('start_time_ticks').text))
 	except:
-		Warning('ConvertRecordingToEpisode: Recording: "%s", AirTime error, Unexpected error: %s' % showname)
+		Warning('ConvertRecordingToEpisode: Recording: "%s", AirTime error, Unexpected error' % showname)
 		airdate = datetime.datetime.now()
 
 	if dateasname:
