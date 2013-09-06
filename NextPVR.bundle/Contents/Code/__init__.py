@@ -175,7 +175,7 @@ def AddEpisodeObject(show_title):
 	return oc
 
 ####################################################################################################
-@route('/video/nextpvr/videoobject')
+#@route('/video/nextpvr/videoobject')
 def CreateVideoObject(url, title, summary, rating_key, originally_available_at=None, duration=None, include_container=False):
 	Log('Date %s ' % originally_available_at)
 	track_object = EpisodeObject(
