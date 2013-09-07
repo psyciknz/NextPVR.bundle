@@ -95,6 +95,7 @@ def WhatsNewRecordingsMenu():
 	u = urllib2.urlopen(request)
 	Log('WhatsNewRecordingsMenu: Result = %s code= %s' % ( u.code,u.msg))
 	tree = ET.parse(u)
+	#tree = ET.parse('g:\\recordings\\services.xml')
 	root = tree.getroot()
 	
 	# calculating the start date - to be in <start_time>20/01/2012 10:30:00 a.m.</start_time> format
@@ -132,6 +133,7 @@ def RecordingsMenu():
 	u = urllib2.urlopen(request)
 	Log('RecordingsMenu: Result = %s code= %s' % ( u.code,u.msg))
 	tree = ET.parse(u)
+	#tree = ET.parse('g:\\recordings\\services.xml')
 	root = tree.getroot()
 	
 	# Nodes with start_time > stime which is x number of days ago
@@ -161,6 +163,7 @@ def AddEpisodeObject(show_title):
 	u = urllib2.urlopen(request)
 	Log('AddEpisodeObject: Result = %s code= %s' % ( u.code,u.msg))
 	tree = ET.parse(u)
+	#tree = ET.parse('g:\\recordings\\services.xml')
 	root = tree.getroot()
 	Log('Root = %s'  %  root)
 	
@@ -176,17 +179,25 @@ def AddEpisodeObject(show_title):
 
 ####################################################################################################
 #@route('/video/nextpvr/videoobject')
-def CreateVideoObject(url, title, summary, rating_key, originally_available_at=None, duration=None, include_container=False):
+def CreateVideoObject(url, title, summary, rating_key, originally_available_at=None, duration=None, channel=None,include_container=False):
 	Log('Date %s ' % originally_available_at)
+
+	if int(duration) <1:
+		duration = '50'
+
+	if not channel is None:
+		thumb = PVR_URL + 'services?method=channel.icon&channel_id=%s' % channel
+	else:
+		thumb = R(ART)
+
 	track_object = EpisodeObject(
-		key = Callback(CreateVideoObject, url=url, title=title, summary=summary, rating_key=rating_key,originally_available_at=originally_available_at, duration=duration, include_container=True),
+		key = Callback(CreateVideoObject, url=url, title=title, summary=summary, rating_key=rating_key,originally_available_at=originally_available_at, duration=duration, channel=channel,include_container=True),
 		title = title,
 		summary = summary,
 		originally_available_at = Datetime.ParseDate(originally_available_at),
-		
 		duration = int(duration),
 		rating_key=int(rating_key),
-		thumb = R(ART),
+		thumb = thumb,
 		items = [
 			MediaObject(
 				parts = [
@@ -232,12 +243,16 @@ def ConvertRecordingToEpisode(recording, dateasname):
 	Log('ConvertRecordingToEpisode: Name  "%s" URL="%s"' % (showname,testURL))
 	#add duration of video
 	try:
-		t = datetime.datetime.strptime(recording.find('duration').text,"%H:%M")
+		durationtext = recording.find('duration').text
+		t = datetime.datetime.strptime(durationtext,"%H:%M")
 		delta = datetime.timedelta(hours=t.hour, minutes=t.minute, seconds=0)
 	except:
 		Warning('ConvertRecordingToEpisode: Recording: "%s", Duration error, Unexpected error' % showname)
 		delta = datetime.timedelta(hours=1, minutes=0,seconds=0)
-	Log('ConvertRecordingToEpisode: Duration Set to "%d"' % delta.total_seconds())
+	if not delta is None:
+		Log('ConvertRecordingToEpisode: Duration Set to "%d"' % delta.total_seconds())
+	else:
+		Log('ConvertRecordingToEpisode: Duration Set is empty')
 	
 	# Added test for empty description
 	try:
@@ -254,6 +269,17 @@ def ConvertRecordingToEpisode(recording, dateasname):
 		Warning('ConvertRecordingToEpisode: Recording: "%s", AirTime error, Unexpected error' % showname)
 		airdate = datetime.datetime.now()
 
+	try:
+		channel = recording.find('channel_id').text
+		if channel == '0':
+			channel = None
+	except:
+		Warning('ConvertRecordingToEpisode: Recording: "%s", Could not set channel ID' % showname)			
+		channel = None
+	if not channel is None:
+		Log('ConvertRecordingToEpisode: Channel ID set to "%s"' % channel)
+		
+	#set episode name - if date as name bool set then use the the date, otherwide use teh showname and the date (whats new)
 	if dateasname:
 		epname = airdate.strftime('%Y-%m-%d')
 	else:
@@ -268,5 +294,6 @@ def ConvertRecordingToEpisode(recording, dateasname):
 		summary=descr,
 		rating_key=str(int(airdate.strftime('%Y%m%d%H%M'))),
 		originally_available_at=airdate.strftime('%c'),
-		duration=str(int(delta.total_seconds() * 1000))
+		duration=str(int(delta.total_seconds() * 1000)),
+		channel=channel
 	)
