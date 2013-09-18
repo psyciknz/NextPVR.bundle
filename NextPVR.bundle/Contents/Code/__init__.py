@@ -42,7 +42,8 @@ def MainMenu():
     Log('MainMenu: Adding What\'s New Menu')
     dir.add(DirectoryObject(key=Callback(WhatsNewRecordingsMenu), title='What\'s New'))
     Log('MainMenu: Adding Live Menu')
-    #dir.add(DirectoryObject(key=Callback(LiveMenu), title='Live'))
+    dir.add(DirectoryObject(key=Callback(LiveMenu), title='Live'))
+    Log('MainMenu: Adding Recordings Menu')
     dir.add(DirectoryObject(key=Callback(RecordingsMenu), title='Recordings'))
 
     #Log('MainMenu: Live Menu Added')
