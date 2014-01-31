@@ -63,7 +63,16 @@ def MainMenu():
     dir.add(DirectoryObject(key=Callback(LiveMenu), title='Live'))
     Log('MainMenu: Adding Recordings Menu')
     dir.add(DirectoryObject(key=Callback(RecordingsMenu), title='Recordings'))
-
+    
+    #http://192.168.1.100:8866/streamer/vlc/stream.aspx?url=/live?channel=3
+    #dir.add(
+	#	CreateVideoClipObject(
+	#		url = PVR_URL + 'live?channel=3',
+	#		title = 'TestLive3',
+	#		rating_key=1,
+	#		channel=3
+	#		)
+	#	)
     #Log('MainMenu: Live Menu Added')
     dir.add(PrefsObject(title="Preferences", summary="Configure how to connect to NextPVR", thumb=R("icon-prefs.png")))
     Log('MainMenu: URL set to %s' % PVR_URL)
@@ -106,10 +115,9 @@ def LiveMenu():
 		testURL = PVR_URL + 'live?channel=%s&sid=plex' % channelnumber
 		Log('LiveMenu: URL set to %s' % testURL)
 		oc.add(
-		CreateVideoObject(
+		CreateVideoClipObject(
 			url = testURL,
 			title = channelname,
-			summary = programmname,
 			rating_key=int(channelnumber),
 			channel=channelid
 			)
@@ -215,7 +223,7 @@ def AddEpisodeObject(show_title):
 
 ####################################################################################################
 #@route('/video/nextpvr/videoobject')
-def CreateVideoObject(url, title, summary, rating_key, playback_position, originally_available_at=None, duration=0, channel=None, include_container=False):
+def CreateVideoObject(url, title, summary, rating_key, playback_position, originally_available_at=None, duration=0, channel=None, container='mp2ts', include_container=False):
 	Log('Date %s ' % originally_available_at)
 
 	if int(duration) <1:
@@ -238,7 +246,7 @@ def CreateVideoObject(url, title, summary, rating_key, playback_position, origin
 		thumb = R(ART)
 
 	track_object = EpisodeObject(
-		key = Callback(CreateVideoObject, url=url, title=unwatchedstring + title, summary=playbackstring + ' ' + summary, rating_key=rating_key,playback_position=playback_position,originally_available_at=originally_available_at, duration=duration, channel=channel,include_container=True),
+		key = Callback(CreateVideoObject, url=url, title=unwatchedstring + title, summary=playbackstring + ' ' + summary, rating_key=rating_key,playback_position=playback_position,originally_available_at=originally_available_at, duration=duration, channel=channel,container=container,include_container=True),
 		title = unwatchedstring + title ,
 		summary = playbackstring + ' ' + summary,
 		originally_available_at = Datetime.ParseDate(originally_available_at),
@@ -250,7 +258,7 @@ def CreateVideoObject(url, title, summary, rating_key, playback_position, origin
 				parts = [
 					PartObject(key=url)
 				],
-				container = 'mp2ts',
+				container = container,
 				#video_codec = VideoCodec.H264,
 				#audio_channels = 2,
 				optimized_for_streaming = True
@@ -263,6 +271,68 @@ def CreateVideoObject(url, title, summary, rating_key, playback_position, origin
 	else:
 		return track_object
 
+####################################################################################################
+@route('/video/nextpvr/videoclipobject')
+def CreateVideoClipObject(url, title, rating_key, channel=None, container='mp2ts', include_container=False):
+	
+	if not channel is None:
+		thumb = PVR_URL + 'services?method=channel.icon&channel_id=%s' % channel
+	else:
+		thumb = R(ART)
+
+	Log('CreateVideoClipObject: Playvideo: ' + url)
+	track_object = EpisodeObject(
+		key = Callback(CreateVideoClipObject, url=url, title=title, rating_key=rating_key,channel=channel,container=container,include_container=True),
+		title = title ,
+		summary = title,
+		originally_available_at = datetime.datetime.now(),
+		duration = int(3600000),
+		rating_key=int(rating_key),
+		thumb = thumb,
+		items = [
+			MediaObject(
+				parts = [
+					PartObject(key=url)
+				],
+				container = container,
+				#video_codec = VideoCodec.H264,
+				#audio_channels = 2,
+				optimized_for_streaming = True
+			)
+		]
+	)
+	#track_object = VideoClipObject(
+	#	key = Callback(CreateVideoClipObject, url=url, title=title, rating_key=rating_key,channel=channel,container=container,include_container=True),
+	#	title = title ,
+	#	rating_key=int(rating_key),
+	#	thumb = thumb,
+	#	items = [
+	#		MediaObject(
+	#			parts = [
+	#				PartObject(
+	#					key=Callback(PlayVideo, channel='3',url = url),
+	#					duration = 3600
+	#				)
+	#			],
+	#			container =  container,
+	#			duration = 3600,
+	#			audio_channels = 2,
+	#			#audio_codec = AudioCodec.AAC,
+	#			#video_codec = VideoCodec.H264,
+	#			optimized_for_streaming = True
+	#		)
+	#	]
+	#)
+
+	if include_container:
+		return ObjectContainer(objects=[track_object])
+	else:
+		return track_object
+
+def PlayVideo(channel,url):
+	# Tune in to the stream
+	Log('Playvideo: ' + url)
+	return Redirect(url)
 ####################################################################################################
 def ValidatePrefs():
 	global PVR_URL
@@ -303,7 +373,8 @@ def ConvertRecordingToEpisode(recording, dateasname):
 		Log('ConvertRecordingToEpisode: Duration Set to "%d"' % delta.total_seconds())
 	else:
 		Log('ConvertRecordingToEpisode: Duration Set is empty')
-	
+	duration = str(int(delta.total_seconds() * 1000))
+
 	# Added test for empty description
 	try:
 		descr = recording.find('desc').text.strip()
@@ -311,6 +382,17 @@ def ConvertRecordingToEpisode(recording, dateasname):
 		Warning('ConvertRecordingToEpisode: Recording: "%s", Descr error, Unexpected error' % showname)
 		descr = showname
 	Log('ConvertRecordingToEpisode: Desc Set to "%s"' % descr)
+
+	# Added test for empty description
+	try:
+		status = recording.find('status').text.strip()
+	except:
+		Warning('ConvertRecordingToEpisode: Recording: "%s", Status error, Unexpected error' % showname)
+		status = 'Reading'
+
+	if status == 'Recording':
+		duration = '3600'
+	Log('ConvertRecordingToEpisode: Duration  Set to "%s"' % duration)
 
 	#Added try/Catch for dates
 	try:
@@ -352,7 +434,7 @@ def ConvertRecordingToEpisode(recording, dateasname):
 		rating_key=str(epid),
 		playback_position=position,
 		originally_available_at=airdate.strftime('%c'),
-		duration=str(int(delta.total_seconds() * 1000)),
+		duration=duration,
 		channel=channel
 	)
 
