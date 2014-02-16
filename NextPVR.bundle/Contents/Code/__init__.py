@@ -29,6 +29,7 @@ PVR_URL = 'http://%s:%s/' % (Prefs['server'],Prefs['port'])
 PMS_URL = 'http://localhost:32400%s'
 OPCODE_DATA = (websocket.ABNF.OPCODE_TEXT, websocket.ABNF.OPCODE_BINARY)
 
+clientident = 'xxxxxxx'
 ####################################################################################################
 
 def Start():
@@ -37,7 +38,7 @@ def Start():
     Log('%s Started' % NAME)
     #PVR_URL = 'http://%s:%s/' % (Prefs['server'],Prefs['port'])
     Log('URL set to %s' % PVR_URL)
-
+    
     try:
         # Get curret server version and save it to dict.
         server_version = XML.ElementFromURL(PMS_URL % '', errors='ignore').attrib['version']
@@ -56,6 +57,10 @@ def Start():
 @handler('/video/nextpvr','NextPVR')
 def MainMenu():
 	
+    Log('Client %s' % Request.Headers)
+    clienttype = Request.Headers['X-Plex-Device-Name']
+    clientident = Request.Headers['X-Plex-Client-Identifier']
+    Log('Client Details: type %s ident:%s' % (clienttype, clientident))
     dir=ObjectContainer()
     Log('MainMenu: Adding What\'s New Menu')
     dir.add(DirectoryObject(key=Callback(WhatsNewRecordingsMenu), title='What\'s New'))
@@ -82,8 +87,10 @@ def MainMenu():
 @route('/video/nextpvr/live')
 def LiveMenu():
 	oc = ObjectContainer(title2='Live')
-	
-	url = PVR_URL + 'services?method=channel.listings.current&sid=plex'
+
+	clientident = Request.Headers['X-Plex-Client-Identifier']
+
+	url = PVR_URL + 'services?method=channel.listings.current&sid=plex&client=%s' % clientident
 	Log('LiveMenu: Loading URL %s' % url)
 	request = urllib2.Request(url, headers={"Accept" : "application/xml"})
 	Log('LiveMenu: Request: %s' % request)
@@ -101,23 +108,28 @@ def LiveMenu():
 		channelname = channel.attrib['name']
 		channelnumber = channel.attrib['number']
 		channelid = channel.attrib['id']
+		
 		Log('LiveMenu: Channel number \'%s\' name is \'%s\'' % (channelnumber, channelname))
 		
 		Log('LiveMenu: Getting first programme for %s' % channelname)
 		programme = channel.find('l')
+		summary = channelname
 		if programme is None:
 			programmname = channelname
 		else:
 			Log('LiveMenu: Looking for programme name for channel %s' % channelname)
 			programmname = programme.find('name').text
+			summary = programmname + ':' + programme.find('description').text
+			Log('LiveMenu: Summary %s' % summary)
 		
 		
-		testURL = PVR_URL + 'live?channel=%s&sid=plex' % channelnumber
+		testURL = PVR_URL + 'live?channel=%s&sid=plex&client=%s' % (channelnumber,clientident)
 		Log('LiveMenu: URL set to %s' % testURL)
 		oc.add(
 		CreateVideoClipObject(
 			url = testURL,
 			title = channelname,
+			summary=summary,
 			rating_key=int(channelnumber),
 			channel=channelid
 			)
@@ -273,7 +285,7 @@ def CreateVideoObject(url, title, summary, rating_key, playback_position, origin
 
 ####################################################################################################
 @route('/video/nextpvr/videoclipobject')
-def CreateVideoClipObject(url, title, rating_key, channel=None, container='mp2ts', include_container=False):
+def CreateVideoClipObject(url, title, summary, rating_key, channel=None, container='mp2ts', include_container=False):
 	
 	if not channel is None:
 		thumb = PVR_URL + 'services?method=channel.icon&channel_id=%s' % channel
@@ -282,9 +294,9 @@ def CreateVideoClipObject(url, title, rating_key, channel=None, container='mp2ts
 
 	Log('CreateVideoClipObject: Playvideo: ' + url)
 	track_object = EpisodeObject(
-		key = Callback(CreateVideoClipObject, url=url, title=title, rating_key=rating_key,channel=channel,container=container,include_container=True),
+		key = Callback(CreateVideoClipObject, url=url, title=title, summary=summary, rating_key=rating_key,channel=channel,container=container,include_container=True),
 		title = title ,
-		summary = title,
+		summary = summary,
 		originally_available_at = datetime.datetime.now(),
 		duration = int(3600000),
 		rating_key=int(rating_key),
