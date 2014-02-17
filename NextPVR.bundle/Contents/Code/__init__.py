@@ -118,17 +118,17 @@ def LiveMenu():
 			programmname = channelname
 		else:
 			Log('LiveMenu: Looking for programme name for channel %s' % channelname)
-			programmname = programme.find('name').text
-			summary = programmname + ':' + programme.find('description').text
-			Log('LiveMenu: Summary %s' % summary)
-		
+			programmname = channelname + ' : ' + programme.find('name').text
+			summary = programme.find('description').text
+
+		Log('LiveMenu: Channel name %s, Summary %s' % (programmname,summary))
 		
 		testURL = PVR_URL + 'live?channel=%s&sid=plex&client=%s' % (channelnumber,clientident)
 		Log('LiveMenu: URL set to %s' % testURL)
 		oc.add(
 		CreateVideoClipObject(
 			url = testURL,
-			title = channelname,
+			title = programmname,
 			summary=summary,
 			rating_key=int(channelnumber),
 			channel=channelid
