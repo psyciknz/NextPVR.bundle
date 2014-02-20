@@ -58,9 +58,13 @@ def Start():
 def MainMenu():
 	
     Log('Client %s' % Request.Headers)
-    clienttype = Request.Headers['X-Plex-Device-Name']
-    clientident = Request.Headers['X-Plex-Client-Identifier']
-    Log('Client Details: type %s ident:%s' % (clienttype, clientident))
+    clientident = ''
+    try:
+        clientident = Request.Headers['X-Plex-Client-Identifier']
+    except:
+        Log('Could not get client details')
+ 
+    Log('Client Details: ident:%s' %  clientident)
     dir=ObjectContainer()
     Log('MainMenu: Adding What\'s New Menu')
     dir.add(DirectoryObject(key=Callback(WhatsNewRecordingsMenu), title='What\'s New'))
@@ -88,7 +92,11 @@ def MainMenu():
 def LiveMenu():
 	oc = ObjectContainer(title2='Live')
 
-	clientident = Request.Headers['X-Plex-Client-Identifier']
+	clientident = ''
+	try:
+		clientident = Request.Headers['X-Plex-Client-Identifier']
+	except:
+		Log('Could not get client details')
 
 	url = PVR_URL + 'services?method=channel.listings.current&sid=plex&client=%s' % clientident
 	Log('LiveMenu: Loading URL %s' % url)
