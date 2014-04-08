@@ -247,7 +247,7 @@ def CreateVideoObject(url, title, summary, rating_key, playback_position, origin
 	Log('Date %s ' % originally_available_at)
 
 	if int(duration) <1:
-		duration = '50'
+		duration = '3600000'
 
 	playbackstring = ''
 	unwatchedstring = ''
