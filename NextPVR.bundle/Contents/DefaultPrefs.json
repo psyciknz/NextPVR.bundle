@@ -16,5 +16,12 @@
         "type": "text",
         "label": "Whats New Days",
         "default": "10"
+    },
+    {
+        "id": "pendingdays",
+        "type": "text",
+        "label": "Pending Days",
+        "default": "10"
     }
+
 ]

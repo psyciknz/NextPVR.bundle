@@ -72,7 +72,9 @@ def MainMenu():
     dir.add(DirectoryObject(key=Callback(LiveMenu), title='Live'))
     Log('MainMenu: Adding Recordings Menu')
     dir.add(DirectoryObject(key=Callback(RecordingsMenu), title='Recordings'))
-    
+    Log('MainMenu: Adding Pending Recordings Menu')
+    dir.add(DirectoryObject(key=Callback(PendingRecordingsMenu), title='Upcoming'))
+
     #http://192.168.1.100:8866/streamer/vlc/stream.aspx?url=/live?channel=3
     #dir.add(
 	#	CreateVideoClipObject(
@@ -242,6 +244,47 @@ def AddEpisodeObject(show_title):
 	return oc
 
 ####################################################################################################
+@route('/video/nextpvr/pendingrecordings')
+def PendingRecordingsMenu():
+	Log('PendingRecordingsMenu: Generating PendingRecordingsMenu Screen')
+	oc = ObjectContainer(title2='Upcoming Recordings')
+	Log('PendingRecordingsMenu: Calling Recording List')
+	url = PVR_URL + 'services?method=recording.list&filter=Pending&sid=plex'
+	Log('Loading URL %s' % url)
+	request = urllib2.Request(url, headers={"Accept" : "application/xml"})
+	Log('PendingRecordingsMenu: Request: %s' % request)
+	u = urllib2.urlopen(request)
+	Log('PendingRecordingsMenu: Result = %s code= %s' % ( u.code,u.msg))
+	tree = ET.parse(u)
+	#tree = ET.parse('g:\\recordings\\services.xml')
+	root = tree.getroot()
+	
+	# calculating the start date - to be in <start_time>20/01/2012 10:30:00 a.m.</start_time> format
+	pendingdays = int(Prefs['pendingdays'])
+	
+	newdate = datetime.datetime.now() + datetime.timedelta(days=pendingdays)
+	newticks = (newdate - datetime.datetime(1970, 1, 1)).total_seconds()
+	Log('PendingRecordingsMenu: Calculated start date "%d" days forward as "%s" ticks = %d' % (pendingdays,newdate.isoformat(),newticks))
+
+	# Nodes with start_time > stime which is x number of days ago
+	recordings = root.findall('recordings/recording')
+	for recording in recordings:
+		Log('PendingRecordingsMenu: Recording id %s' % recording.find('id').text)
+		startticks = int(recording.find('start_time_ticks').text)
+		if startticks < newticks:
+			oc.add(ConvertRecordingToEpisode(recording,dateasname=False))
+			Log('PendingRecordingsMenu: Status %s' % recording.find('status').text.encode('utf-8'))
+		
+	
+	#oc.objects.sort(key=lambda obj: obj.rating_key,reverse=True)
+	oc.objects.sort(key=lambda obj: obj.originally_available_at,reverse=True)
+	Log('PendingRecordingsMenu: Completed PendingRecordingsMenu Menu')
+	#oc.objects.sort(key=lambda obj: obj.url,reverse=True)
+	return oc
+
+
+
+####################################################################################################
 #@route('/video/nextpvr/videoobject')
 def CreateVideoObject(url, title, summary, rating_key, playback_position, originally_available_at=None, duration=0, channel=None, container='mp2ts', include_container=False):
 	Log('Date %s ' % originally_available_at)
@@ -315,6 +358,7 @@ def CreateVideoClipObject(url, title, summary, rating_key, channel=None, contain
 					PartObject(key=url)
 				],
 				container = container,
+				#video_resolution = 128,
 				#video_codec = VideoCodec.H264,
 				#audio_channels = 2,
 				optimized_for_streaming = True
