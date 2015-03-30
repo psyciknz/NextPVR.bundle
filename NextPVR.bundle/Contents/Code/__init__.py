@@ -74,6 +74,8 @@ def MainMenu():
     dir.add(DirectoryObject(key=Callback(RecordingsMenu), title='Recordings'))
     Log('MainMenu: Adding Pending Recordings Menu')
     dir.add(DirectoryObject(key=Callback(PendingRecordingsMenu), title='Upcoming'))
+    Log('MainMenu: Adding Delete Recordings Menu')
+    dir.add(DirectoryObject(key=Callback(DeleteRecordingsMenu), title='Delete', summary='Deletes a recording, there is no confirmation, so be sure of the delete.'))
 
     #http://192.168.1.100:8866/streamer/vlc/stream.aspx?url=/live?channel=3
     #dir.add(
@@ -175,7 +177,7 @@ def WhatsNewRecordingsMenu():
 		Log('WhatsNewRecordingsMenu: Recording id %s' % recording.find('id').text)
 		startticks = int(recording.find('start_time_ticks').text)
 		if startticks > newticks:
-			oc.add(ConvertRecordingToEpisode(recording,dateasname=False))
+			oc.add(ConvertRecordingToEpisode(recording,dateasname=False,returnVideoObject=True))
 			Log('WhatsNewRecordingsMenu: Status %s' % recording.find('status').text.encode('utf-8'))
 		
 	
@@ -237,7 +239,7 @@ def AddEpisodeObject(show_title):
 	for recording in recordings:
 		showname = recording.find('name').text
 		if showname == show_title:
-			oc.add(ConvertRecordingToEpisode(recording,dateasname=True))
+			oc.add(ConvertRecordingToEpisode(recording,dateasname=True,returnVideoObject=True))
 
 	#oc.objects.sort(key=lambda obj: obj.rating_key,reverse=False)
 	oc.objects.sort(key=lambda obj: obj.originally_available_at,reverse=False)
@@ -272,7 +274,7 @@ def PendingRecordingsMenu():
 		Log('PendingRecordingsMenu: Recording id %s' % recording.find('id').text)
 		startticks = int(recording.find('start_time_ticks').text)
 		if startticks < newticks:
-			oc.add(ConvertRecordingToEpisode(recording,dateasname=False))
+			oc.add(ConvertRecordingToEpisode(recording,dateasname=False,returnVideoObject=True))
 			Log('PendingRecordingsMenu: Status %s' % recording.find('status').text.encode('utf-8'))
 		
 	
@@ -282,6 +284,46 @@ def PendingRecordingsMenu():
 	#oc.objects.sort(key=lambda obj: obj.url,reverse=True)
 	return oc
 
+####################################################################################################
+@route('/video/nextpvr/deleterecordings')
+def DeleteRecordingsMenu():
+	Log('DeleteRecordingsMenu: Generating DeleteRecordingsMenu Screen')
+	oc = ObjectContainer(title2='Delete Recordings')
+	Log('DeleteRecordingsMenu: Calling Recording List')
+	url = PVR_URL + 'services?method=recording.list&filter=Ready&sid=plex'
+	Log('Loading URL %s' % url)
+	request = urllib2.Request(url, headers={"Accept" : "application/xml"})
+	Log('DeleteRecordingsMenu: Request: %s' % request)
+	u = urllib2.urlopen(request)
+	Log('DeleteRecordingsMenu: Result  = %s code= %s' % ( u.code,u.msg))
+	tree = ET.parse(u)
+	#tree = ET.parse('g:\\recordings\\services.xml')
+	root = tree.getroot()
+	
+	# calculating the start date - to be in <start_time>20/01/2012 10:30:00 a.m.</start_time> format
+	pendingdays = int(Prefs['pendingdays'])
+	
+	newdate = datetime.datetime.now() + datetime.timedelta(days=pendingdays)
+	newticks = (newdate - datetime.datetime(1970, 1, 1)).total_seconds()
+	Log('DeleteRecordingsMenu: Calculated start date "%d" days forward as "%s" ticks = %d' % (pendingdays,newdate.isoformat(),newticks))
+
+	# Nodes with start_time > stime which is x number of days ago
+	recordings = root.findall('recordings/recording')
+	
+	for recording in recordings:
+		try:
+			Log('DeleteRecordingsMenu: Recording id %s' % recording.find('id').text)
+			oc.add(ConvertRecordingToEpisode(recording,dateasname=False,returnVideoObject=False))
+			Log('DeleteRecordingsMenu: Status %s' % recording.find('status').text.encode('utf-8'))
+		except:
+			Log('Error procesing recording Recording id %s' % recording.find('id').text)
+		
+	
+	#oc.objects.sort(key=lambda obj: obj.rating_key,reverse=True)
+	#oc.objects.sort(key=lambda obj: obj.originally_available_at,reverse=True)
+	Log('DeleteRecordingsMenu: Completed DeleteRecordingsMenu Menu')
+	#oc.objects.sort(key=lambda obj: obj.url,reverse=True)
+	return oc
 
 
 ####################################################################################################
@@ -413,7 +455,7 @@ def ValidatePrefs():
 		return MessageContainer("Success","Success")
 
 ####################################################################################################
-def ConvertRecordingToEpisode(recording, dateasname):
+def ConvertRecordingToEpisode(recording, dateasname, returnVideoObject):
 	showname = recording.find('name').text
 	Log('**********************************************************************************************************')
 
@@ -490,17 +532,62 @@ def ConvertRecordingToEpisode(recording, dateasname):
 	Log('ConvertRecordingToEpisode: Setting episode name to date "%s"' % epname)
 
 	Log('ConvertRecordingToEpisode: Air date %s in iso format:%d' % (airdate.strftime('%c'),int(airdate.strftime('%Y%m%d%H%M'))))
-	return CreateVideoObject(
-		url=testURL,
-		title=epname,
-		summary=descr,
-		#rating_key=str(int(airdate.strftime('%Y%m%d%H%M'))),
-		rating_key=str(epid),
-		playback_position=position,
-		originally_available_at=airdate.strftime('%c'),
-		duration=duration,
-		channel=channel
-	)
+	if returnVideoObject:
+		Log('Returning Video Object')
+		return CreateVideoObject(
+			url=testURL,
+			title=epname,
+			summary=descr,
+			#rating_key=str(int(airdate.strftime('%Y%m%d%H%M'))),
+			rating_key=str(epid),
+			playback_position=position,
+			originally_available_at=airdate.strftime('%c'),
+			duration=duration,
+			channel=channel
+		)
+	else:
+		Log('Returning PopupDirectoryObject' + str(epid) + ' title:' + epname)
+		return PopupDirectoryObject(
+			key = Callback(EpisodeDeleteRefresh, tvid=str(epid)),
+			title=epname,
+			tagline=descr,
+			summary=descr,
+			thumb=R(ART),
+			duration=duration
+		)
+
+####################################################################################################
+@route('/video/nextpvr/episode', episode=dict)
+def EpisodePopup(episode={},tvid=None):
+    '''display a popup menu with the option to force a search for the selected episode/series'''
+    oc = ObjectContainer()
+
+    Log('Episode popup')
+    episode=episode['episode']
+    
+    oc.add(DirectoryObject(key=Callback(EpisodeRefresh, episode=episode),
+        title="Delete Rcording"))
+    
+    return oc
+
+####################################################################################################
+@route('/video/nextpvr/episoderefresh')
+def EpisodeDeleteRefresh(tvid=None):
+	'''tell SickBeard to do a force search for the given episode'''
+	testURL = PVR_URL + 'service?method=recording.delete&recording_id=%s&sid=plex' % tvid
+	Log('Episode Delete REfresh url "%s"' % testURL)
+	Log('Executng request to nextpvr now')
+	request = urllib2.Request(testURL, headers={"Accept" : "application/xml"})
+	Log('EpisodeDeleteRefresh: Request Result: %s' % request)
+	u = urllib2.urlopen(request)
+	tree = ET.parse(u)
+	#tree = ET.parse('g:\\recordings\\services.xml')
+	root = tree.getroot()
+	Log('EpisodeDeleteRefresh: getting response root')
+	#response = root.find('rsp')
+	#Log('EpisodeDeleteRefresh: Got response ')
+	status = root.get('stat')
+	return ObjectContainer(header=NAME, message=status)
 
 ####################################################################################################
 @route('/video/nextpvr/socketlisten')
