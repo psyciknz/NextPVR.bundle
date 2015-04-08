@@ -1,5 +1,10 @@
 [
     {
+        "id": "version",
+        "type": "text",
+        "label": "Version Number (no need to change)",
+        "default": "0.3.1" 
+    },{
         "id": "server",
         "type": "text",
         "label": "Server Name",

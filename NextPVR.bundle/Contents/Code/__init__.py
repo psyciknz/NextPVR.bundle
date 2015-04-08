@@ -67,15 +67,15 @@ def MainMenu():
     Log('Client Details: ident:%s' %  clientident)
     dir=ObjectContainer()
     Log('MainMenu: Adding What\'s New Menu')
-    dir.add(DirectoryObject(key=Callback(WhatsNewRecordingsMenu), title='What\'s New'))
+    dir.add(DirectoryObject(key=Callback(WhatsNewRecordingsMenu), title='What\'s New',thumb=R('new.jpg')))
     Log('MainMenu: Adding Live Menu')
-    dir.add(DirectoryObject(key=Callback(LiveMenu), title='Live'))
+    dir.add(DirectoryObject(key=Callback(LiveMenu), title='Live',thumb=R('live.jpg')))
     Log('MainMenu: Adding Recordings Menu')
-    dir.add(DirectoryObject(key=Callback(RecordingsMenu), title='Recordings'))
+    dir.add(DirectoryObject(key=Callback(RecordingsMenu), title='Recordings',thumb=R('recordings.jpg')))
     Log('MainMenu: Adding Pending Recordings Menu')
-    dir.add(DirectoryObject(key=Callback(PendingRecordingsMenu), title='Upcoming'))
+    dir.add(DirectoryObject(key=Callback(PendingRecordingsMenu), title='Upcoming',thumb=R('upcoming.jpg')))
     Log('MainMenu: Adding Delete Recordings Menu')
-    dir.add(DirectoryObject(key=Callback(DeleteRecordingsMenu), title='Delete', summary='Deletes a recording, there is no confirmation, so be sure of the delete.'))
+    dir.add(DirectoryObject(key=Callback(DeleteRecordingsMenu), title='Delete', summary='Deletes a recording, there is no confirmation, so be sure of the delete.',thumb=R('delete.jpg')))
 
     #http://192.168.1.100:8866/streamer/vlc/stream.aspx?url=/live?channel=3
     #dir.add(
@@ -345,8 +345,10 @@ def CreateVideoObject(url, title, summary, rating_key, playback_position, origin
 	except:
 		playbackstring = ''
 
+	showthumb = PVR_URL + 'service?method=recording.artwork&recording_id=%s&sid=plex' % str(rating_key)
+	Log('CreateVideoClipObject Getting artwork url "%s"' % showthumb)
 	if not channel is None:
-		thumb = PVR_URL + 'services?method=channel.icon&channel_id=%s&sid=plex' % channel
+		thumb = PVR_URL + 'services?method=channel.icon&channel_id=%s' % channel
 	else:
 		thumb = R(ART)
 
@@ -357,7 +359,7 @@ def CreateVideoObject(url, title, summary, rating_key, playback_position, origin
 		originally_available_at = Datetime.ParseDate(originally_available_at),
 		duration = int(duration),
 		rating_key=int(rating_key),
-		thumb = thumb,
+		thumb = Resource.ContentsOfURLWithFallback(url=showthumb, fallback='icon-default.png'),
 		items = [
 			MediaObject(
 				parts = [
@@ -380,6 +382,8 @@ def CreateVideoObject(url, title, summary, rating_key, playback_position, origin
 @route('/video/nextpvr/videoclipobject')
 def CreateVideoClipObject(url, title, summary, rating_key, channel=None, container='mp2ts', include_container=False):
 	
+	showthumb = PVR_URL + 'service?method=recording.artwork&recording_id=%s&sid=plex' % str(rating_key)
+	Log('CreateVideoClipObject Getting artwork url "%s"' % showthumb)
 	if not channel is None:
 		thumb = PVR_URL + 'services?method=channel.icon&channel_id=%s' % channel
 	else:
@@ -393,7 +397,7 @@ def CreateVideoClipObject(url, title, summary, rating_key, channel=None, contain
 		originally_available_at = datetime.datetime.now(),
 		duration = int(3600000),
 		rating_key=int(rating_key),
-		thumb = thumb,
+		thumb = Resource.ContentsOfURLWithFallback(url=thumb, fallback='icon-default.png'),
 		items = [
 			MediaObject(
 				parts = [
