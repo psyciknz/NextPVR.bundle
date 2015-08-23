@@ -328,7 +328,7 @@ def DeleteRecordingsMenu():
 
 ####################################################################################################
 #@route('/video/nextpvr/videoobject')
-def CreateVideoObject(url, title, summary, rating_key, playback_position, originally_available_at=None, duration=0, channel=None, container='mp2ts', include_container=False):
+def CreateVideoObject(url, title, summary, rating_key, playback_position, originally_available_at=None, duration=0, channel=None, container='mp2ts', include_container=False, includeRelated=False,includeRelatedCount=False):
 	Log('Date %s ' % originally_available_at)
 
 	if int(duration) <1:
@@ -380,7 +380,7 @@ def CreateVideoObject(url, title, summary, rating_key, playback_position, origin
 
 ####################################################################################################
 @route('/video/nextpvr/videoclipobject')
-def CreateVideoClipObject(url, title, summary, rating_key, channel=None, container='mp2ts', include_container=False):
+def CreateVideoClipObject(url, title, summary, rating_key, channel=None, container='mp2ts', include_container=False, includeRelated=False,includeRelatedCount=False):
 	
 	showthumb = PVR_URL + 'service?method=recording.artwork&recording_id=%s&sid=plex' % str(rating_key)
 	Log('CreateVideoClipObject Getting artwork url "%s"' % showthumb)
@@ -391,7 +391,7 @@ def CreateVideoClipObject(url, title, summary, rating_key, channel=None, contain
 
 	Log('CreateVideoClipObject: Playvideo: ' + url)
 	track_object = EpisodeObject(
-		key = Callback(CreateVideoClipObject, url=url, title=title, summary=summary, rating_key=rating_key,channel=channel,container=container,include_container=True),
+		key = Callback(CreateVideoClipObject, url=url, title=title, summary=summary, rating_key=rating_key,channel=channel,container=container,include_container=True, includeRelated=False,includeRelatedCount=False),
 		title = title ,
 		summary = summary,
 		originally_available_at = datetime.datetime.now(),
