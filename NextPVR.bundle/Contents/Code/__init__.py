@@ -109,7 +109,8 @@ def LiveMenu():
 	u = urllib2.urlopen(request)
 	Log('LiveMenu: Result = %s code= %s' % ( u.code,u.msg))
 	tree = ET.parse(u)
-	#tree = ET.parse('g:\\recordings\\live.xml')
+	#Log('LiveMenu: Loading listings from xml file')
+	#tree = ET.parse('g:\\plex\\listing.xml')
 	root = tree.getroot()
 	
 	# Nodes with start_time > stime which is x number of days ago
@@ -142,7 +143,7 @@ def LiveMenu():
 			url = testURL,
 			title = programmname,
 			summary=summary,
-			rating_key=int(channelnumber),
+			rating_key=float(channelnumber),
 			channel=channelid
 			)
 		)
@@ -328,7 +329,7 @@ def DeleteRecordingsMenu():
 
 ####################################################################################################
 #@route('/video/nextpvr/videoobject')
-def CreateVideoObject(url, title, summary, rating_key, playback_position, originally_available_at=None, duration=0, channel=None, container='mp2ts', include_container=False, includeRelated=False,includeRelatedCount=False):
+def CreateVideoObject(url, title, summary, rating_key, playback_position, originally_available_at=None, duration=0, channel=None, container='mp2ts', include_container=False, includeRelated=False):
 	Log('Date %s ' % originally_available_at)
 
 	if int(duration) <1:
@@ -358,7 +359,7 @@ def CreateVideoObject(url, title, summary, rating_key, playback_position, origin
 		summary = playbackstring + ' ' + summary,
 		originally_available_at = Datetime.ParseDate(originally_available_at),
 		duration = int(duration),
-		rating_key=int(rating_key),
+		rating_key=float(rating_key),
 		thumb = Resource.ContentsOfURLWithFallback(url=showthumb, fallback='icon-default.png'),
 		items = [
 			MediaObject(
@@ -380,7 +381,7 @@ def CreateVideoObject(url, title, summary, rating_key, playback_position, origin
 
 ####################################################################################################
 @route('/video/nextpvr/videoclipobject')
-def CreateVideoClipObject(url, title, summary, rating_key, channel=None, container='mp2ts', include_container=False, includeRelated=False,includeRelatedCount=False):
+def CreateVideoClipObject(url, title, summary, rating_key, channel=None, container='mp2ts', include_container=False, includeRelated=False):
 	
 	showthumb = PVR_URL + 'service?method=recording.artwork&recording_id=%s&sid=plex' % str(rating_key)
 	Log('CreateVideoClipObject Getting artwork url "%s"' % showthumb)
@@ -391,12 +392,12 @@ def CreateVideoClipObject(url, title, summary, rating_key, channel=None, contain
 
 	Log('CreateVideoClipObject: Playvideo: ' + url)
 	track_object = EpisodeObject(
-		key = Callback(CreateVideoClipObject, url=url, title=title, summary=summary, rating_key=rating_key,channel=channel,container=container,include_container=True, includeRelated=False,includeRelatedCount=False),
+		key = Callback(CreateVideoClipObject, url=url, title=title, summary=summary, rating_key=rating_key,channel=channel,container=container,include_container=True, includeRelated=False),
 		title = title ,
 		summary = summary,
 		originally_available_at = datetime.datetime.now(),
 		duration = int(3600000),
-		rating_key=int(rating_key),
+		rating_key=float(rating_key),
 		thumb = Resource.ContentsOfURLWithFallback(url=thumb, fallback='icon-default.png'),
 		items = [
 			MediaObject(
