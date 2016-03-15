@@ -368,7 +368,8 @@ def CreateVideoObject(url, title, summary, rating_key, playback_position, origin
 				],
 				container = container,
 				#video_codec = VideoCodec.H264,
-				#audio_channels = 2,
+				audio_codec = "AC3",
+                audio_channels = 6,
 				optimized_for_streaming = True
 			)
 		]
@@ -407,7 +408,8 @@ def CreateVideoClipObject(url, title, summary, rating_key, channel=None, contain
 				container = container,
 				#video_resolution = 128,
 				#video_codec = VideoCodec.H264,
-				#audio_channels = 2,
+				audio_codec = "AC3",
+                audio_channels = 6,
 				optimized_for_streaming = True
 			)
 		]
