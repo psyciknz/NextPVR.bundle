@@ -34,23 +34,24 @@ clientident = 'xxxxxxx'
 
 def Start():
     
-    ObjectContainer.title1 = NAME
-    Log('%s Started' % NAME)
-    #PVR_URL = 'http://%s:%s/' % (Prefs['server'],Prefs['port'])
-    Log('URL set to %s' % PVR_URL)
+	ObjectContainer.title1 = NAME
+	Log('%s Started' % NAME)
+	#PVR_URL = 'http://%s:%s/' % (Prefs['server'],Prefs['port'])
+	Log('URL set to %s' % PVR_URL)
     
-    try:
-        # Get curret server version and save it to dict.
-        server_version = XML.ElementFromURL(PMS_URL % '', errors='ignore').attrib['version']
-        Log('Server Version is %s' % server_version)
-        Dict['server_version'] = server_version
+	try:
+		# Get curret server version and save it to dict.
+		server_version = XML.ElementFromURL(PMS_URL % '', errors='ignore').attrib['version']
+		Log('Server Version is %s' % server_version)
+		Dict['server_version'] = server_version
 
-        if not 'nowPlaying' in Dict:
-            Dict['nowPlaying'] = dict()
-    except: pass
-
-    Thread.Create(SocketListen)
-    ValidatePrefs()
+		if not 'nowPlaying' in Dict:
+			Dict['nowPlaying'] = dict()
+	except: pass
+		
+	Log('No socket listen')
+	#Thread.Create(SocketListen)
+	ValidatePrefs()
 
 ####################################################################################################
 # This main function will setup the displayed items.
@@ -74,8 +75,8 @@ def MainMenu():
     dir.add(DirectoryObject(key=Callback(RecordingsMenu), title='Recordings',thumb=R('recordings.jpg')))
     Log('MainMenu: Adding Pending Recordings Menu')
     dir.add(DirectoryObject(key=Callback(PendingRecordingsMenu), title='Upcoming',thumb=R('upcoming.jpg')))
-    Log('MainMenu: Adding Delete Recordings Menu')
-    dir.add(DirectoryObject(key=Callback(DeleteRecordingsMenu), title='Delete', summary='Deletes a recording, there is no confirmation, so be sure of the delete.',thumb=R('delete.jpg')))
+    #Log('MainMenu: Adding Delete Recordings Menu')
+    #dir.add(DirectoryObject(key=Callback(DeleteRecordingsMenu), title='Delete', summary='Deletes a recording, there is no confirmation, so be sure of the delete.',thumb=R('delete.jpg')))
 
     #http://192.168.1.100:8866/streamer/vlc/stream.aspx?url=/live?channel=3
     #dir.add(
@@ -96,7 +97,7 @@ def MainMenu():
 def LiveMenu():
 	oc = ObjectContainer(title2='Live')
 
-	clientident = ''
+	clientident = 'temp'
 	try:
 		clientident = Request.Headers['X-Plex-Client-Identifier']
 	except:
@@ -286,49 +287,49 @@ def PendingRecordingsMenu():
 	return oc
 
 ####################################################################################################
-@route('/video/nextpvr/deleterecordings')
-def DeleteRecordingsMenu():
-	Log('DeleteRecordingsMenu: Generating DeleteRecordingsMenu Screen')
-	oc = ObjectContainer(title2='Delete Recordings')
-	Log('DeleteRecordingsMenu: Calling Recording List')
-	url = PVR_URL + 'services?method=recording.list&filter=Ready&sid=plex'
-	Log('Loading URL %s' % url)
-	request = urllib2.Request(url, headers={"Accept" : "application/xml"})
-	Log('DeleteRecordingsMenu: Request: %s' % request)
-	u = urllib2.urlopen(request)
-	Log('DeleteRecordingsMenu: Result  = %s code= %s' % ( u.code,u.msg))
-	tree = ET.parse(u)
-	#tree = ET.parse('g:\\recordings\\services.xml')
-	root = tree.getroot()
-	
-	# calculating the start date - to be in <start_time>20/01/2012 10:30:00 a.m.</start_time> format
-	pendingdays = int(Prefs['pendingdays'])
-	
-	newdate = datetime.datetime.now() + datetime.timedelta(days=pendingdays)
-	newticks = (newdate - datetime.datetime(1970, 1, 1)).total_seconds()
-	Log('DeleteRecordingsMenu: Calculated start date "%d" days forward as "%s" ticks = %d' % (pendingdays,newdate.isoformat(),newticks))
-
-	# Nodes with start_time > stime which is x number of days ago
-	recordings = root.findall('recordings/recording')
-	
-	for recording in recordings:
-		try:
-			Log('DeleteRecordingsMenu: Recording id %s' % recording.find('id').text)
-			oc.add(ConvertRecordingToEpisode(recording,dateasname=False,returnVideoObject=False))
-			Log('DeleteRecordingsMenu: Status %s' % recording.find('status').text.encode('utf-8'))
-		except:
-			Log('Error procesing recording Recording id %s' % recording.find('id').text)
-		
-	
-	#oc.objects.sort(key=lambda obj: obj.rating_key,reverse=True)
-	#oc.objects.sort(key=lambda obj: obj.originally_available_at,reverse=True)
-	Log('DeleteRecordingsMenu: Completed DeleteRecordingsMenu Menu')
-	#oc.objects.sort(key=lambda obj: obj.url,reverse=True)
-	return oc
-
+#@route('/video/nextpvr/deleterecordings')
+#def DeleteRecordingsMenu():
+#	Log('DeleteRecordingsMenu: Generating DeleteRecordingsMenu Screen')
+#	oc = ObjectContainer(title2='Delete Recordings')
+#	Log('DeleteRecordingsMenu: Calling Recording List')
+#	url = PVR_URL + 'services?method=recording.list&filter=Ready&sid=plex'
+#	Log('Loading URL %s' % url)
+#	request = urllib2.Request(url, headers={"Accept" : "application/xml"})
+#	Log('DeleteRecordingsMenu: Request: %s' % request)
+#	u = urllib2.urlopen(request)
+#	Log('DeleteRecordingsMenu: Result  = %s code= %s' % ( u.code,u.msg))
+#	tree = ET.parse(u)
+#	#tree = ET.parse('g:\\recordings\\services.xml')
+#	root = tree.getroot()
+#	
+#	# calculating the start date - to be in <start_time>20/01/2012 10:30:00 a.m.</start_time> format
+#	pendingdays = int(Prefs['pendingdays'])
+#	
+#	newdate = datetime.datetime.now() + datetime.timedelta(days=pendingdays)
+#	newticks = (newdate - datetime.datetime(1970, 1, 1)).total_seconds()
+#	Log('DeleteRecordingsMenu: Calculated start date "%d" days forward as "%s" ticks = %d' % (pendingdays,newdate.isoformat(),newticks))
+#
+#	# Nodes with start_time > stime which is x number of days ago
+#	recordings = root.findall('recordings/recording')
+#	
+#	for recording in recordings:
+#		try:
+#			Log('DeleteRecordingsMenu: Recording id %s' % recording.find('id').text)
+#			oc.add(ConvertRecordingToEpisode(recording,dateasname=False,returnVideoObject=False))
+#			Log('DeleteRecordingsMenu: Status %s' % recording.find('status').text.encode('utf-8'))
+#		except:
+#			Log('Error procesing recording Recording id %s' % recording.find('id').text)
+#		
+#	
+#	#oc.objects.sort(key=lambda obj: obj.rating_key,reverse=True)
+#	#oc.objects.sort(key=lambda obj: obj.originally_available_at,reverse=True)
+#	Log('DeleteRecordingsMenu: Completed DeleteRecordingsMenu Menu')
+#	#oc.objects.sort(key=lambda obj: obj.url,reverse=True)
+#	return oc
+#
 
 ####################################################################################################
-#@route('/video/nextpvr/videoobject')
+@route('/video/nextpvr/videoobject')
 def CreateVideoObject(url, title, summary, rating_key, playback_position, originally_available_at=None, duration=0, channel=None, container='mp2ts', include_container=False, includeRelated=False,**kwargs):
 	Log('Date %s ' % originally_available_at)
 
@@ -347,12 +348,13 @@ def CreateVideoObject(url, title, summary, rating_key, playback_position, origin
 		playbackstring = ''
 
 	showthumb = PVR_URL + 'service?method=recording.artwork&recording_id=%s&sid=plex' % str(rating_key)
-	Log('CreateVideoClipObject Getting artwork url "%s"' % showthumb)
+	Log('CreateVideoObject: Getting artwork url "%s"' % showthumb)
 	if not channel is None:
 		thumb = PVR_URL + 'services?method=channel.icon&channel_id=%s' % channel
 	else:
 		thumb = R(ART)
-
+		
+	Log('CreateVideoObject: Playvideo: %s with datetime %s' % (url, originally_available_at) )
 	track_object = EpisodeObject(
 		key = Callback(CreateVideoObject, url=url, title=unwatchedstring + title, summary=playbackstring + ' ' + summary, rating_key=rating_key,playback_position=playback_position,originally_available_at=originally_available_at, duration=duration, channel=channel,container=container,include_container=True),
 		title = unwatchedstring + title ,
@@ -367,9 +369,9 @@ def CreateVideoObject(url, title, summary, rating_key, playback_position, origin
 					PartObject(key=url)
 				],
 				container = container,
-				#video_codec = VideoCodec.H264,
-				audio_codec = "AC3",
-                audio_channels = 6,
+				video_codec = VideoCodec.H264,
+				#audio_codec = "AAC",
+                #audio_channels = 2,
 				optimized_for_streaming = True
 			)
 		]
@@ -391,7 +393,7 @@ def CreateVideoClipObject(url, title, summary, rating_key, channel=None, contain
 	else:
 		thumb = R(ART)
 
-	Log('CreateVideoClipObject: Playvideo: ' + url)
+	Log('CreateVideoClipObject: Playvideo: %s' % url)
 	track_object = EpisodeObject(
 		key = Callback(CreateVideoClipObject, url=url, title=title, summary=summary, rating_key=rating_key,channel=channel,container=container,include_container=True, includeRelated=False),
 		title = title ,
@@ -407,9 +409,9 @@ def CreateVideoClipObject(url, title, summary, rating_key, channel=None, contain
 				],
 				container = container,
 				#video_resolution = 128,
-				#video_codec = VideoCodec.H264,
-				audio_codec = "AC3",
-                audio_channels = 6,
+				video_codec = VideoCodec.H264,
+				#audio_codec = "AAC",
+                #audio_channels = 2,
 				optimized_for_streaming = True
 			)
 		]
@@ -441,10 +443,11 @@ def CreateVideoClipObject(url, title, summary, rating_key, channel=None, contain
 		return ObjectContainer(objects=[track_object])
 	else:
 		return track_object
-
+		
+@route('/video/nextpvr/playvideo')
 def PlayVideo(channel,url):
 	# Tune in to the stream
-	Log('Playvideo: ' + url)
+	Log('Playvideo method redirecting to : ' + url)
 	return Redirect(url)
 ####################################################################################################
 def ValidatePrefs():
@@ -545,57 +548,57 @@ def ConvertRecordingToEpisode(recording, dateasname, returnVideoObject):
 			url=testURL,
 			title=epname,
 			summary=descr,
-			#rating_key=str(int(airdate.strftime('%Y%m%d%H%M'))),
 			rating_key=str(epid),
 			playback_position=position,
-			originally_available_at=airdate.strftime('%c'),
+			#originally_available_at=airdate.strftime('%c'),
+			#originally_available_at=airdate.strftime('%Y-%m-%d %H:%M'),
 			duration=duration,
 			channel=channel
 		)
-	else:
-		Log('Returning PopupDirectoryObject' + str(epid) + ' title:' + epname)
-		return PopupDirectoryObject(
-			key = Callback(EpisodeDeleteRefresh, tvid=str(epid)),
-			title=epname,
-			tagline=descr,
-			summary=descr,
-			thumb=R(ART),
-			duration=duration
-		)
+#	else:
+#		Log('Returning PopupDirectoryObject' + str(epid) + ' title:' + epname)
+#		return PopupDirectoryObject(
+#			key = Callback(EpisodeDeleteRefresh, tvid=str(epid)),
+#			title=epname,
+#			tagline=descr,
+#			summary=descr,
+#			thumb=R(ART),
+#			duration=duration
+#		)
 
 ####################################################################################################
-@route('/video/nextpvr/episode', episode=dict)
-def EpisodePopup(episode={},tvid=None):
-    '''display a popup menu with the option to force a search for the selected episode/series'''
-    oc = ObjectContainer()
-
-    Log('Episode popup')
-    episode=episode['episode']
-    
-    oc.add(DirectoryObject(key=Callback(EpisodeRefresh, episode=episode),
-        title="Delete Rcording"))
-    
-    return oc
-
+#@route('/video/nextpvr/episode', episode=dict)
+#def EpisodePopup(episode={},tvid=None):
+#   '''display a popup menu with the option to force a search for the selected episode/series'''
+#   oc = ObjectContainer()
+#
+#    Log('Episode popup')
+#    episode=episode['episode']
+#    
+#    oc.add(DirectoryObject(key=Callback(EpisodeRefresh, episode=episode),
+#        title="Delete Rcording"))
+#    
+#    return oc
+#
 ####################################################################################################
-@route('/video/nextpvr/episoderefresh')
-def EpisodeDeleteRefresh(tvid=None):
-	'''tell SickBeard to do a force search for the given episode'''
-	testURL = PVR_URL + 'service?method=recording.delete&recording_id=%s&sid=plex' % tvid
-	Log('Episode Delete REfresh url "%s"' % testURL)
-	Log('Executng request to nextpvr now')
-	request = urllib2.Request(testURL, headers={"Accept" : "application/xml"})
-	Log('EpisodeDeleteRefresh: Request Result: %s' % request)
-	u = urllib2.urlopen(request)
-	tree = ET.parse(u)
-	#tree = ET.parse('g:\\recordings\\services.xml')
-	root = tree.getroot()
-	Log('EpisodeDeleteRefresh: getting response root')
-	#response = root.find('rsp')
-	#Log('EpisodeDeleteRefresh: Got response ')
-	status = root.get('stat')
-	return ObjectContainer(header=NAME, message=status)
-
+#@route('/video/nextpvr/episoderefresh')
+#def EpisodeDeleteRefresh(tvid=None):
+#	'''tell SickBeard to do a force search for the given episode'''
+#	testURL = PVR_URL + 'service?method=recording.delete&recording_id=%s&sid=plex' % tvid
+#	Log('Episode Delete REfresh url "%s"' % testURL)
+#	Log('Executng request to nextpvr now')
+#	request = urllib2.Request(testURL, headers={"Accept" : "application/xml"})
+#	Log('EpisodeDeleteRefresh: Request Result: %s' % request)
+#	u = urllib2.urlopen(request)
+#	tree = ET.parse(u)
+#	#tree = ET.parse('g:\\recordings\\services.xml')
+#	root = tree.getroot()
+#	Log('EpisodeDeleteRefresh: getting response root')
+#	#response = root.find('rsp')
+#	#Log('EpisodeDeleteRefresh: Got response ')
+#	status = root.get('stat')
+#	return ObjectContainer(header=NAME, message=status)
+#
 ####################################################################################################
 @route('/video/nextpvr/socketlisten')
 def SocketListen():
@@ -616,36 +619,41 @@ def SocketListen():
     
         return None, None
     
-    while True:
-        opcode, data = SocketRecv()
-        msg = None
-        if opcode in OPCODE_DATA:
-            info = JSON.ObjectFromString(data)
-            Log.Debug("Data received: type = " + info['type'])
+	while True:
+		opcode, data = SocketRecv()
+		msg = None
+		if opcode in OPCODE_DATA:
+			info = JSON.ObjectFromString(data)
+			Log.Debug("Data received: type = " + info['type'])
+			#scrobble
             
-            #scrobble
-            if info['type'] == "playing":
-                sessionKey = str(info['_children'][0]['sessionKey'])
-                state = str(info['_children'][0]['state'])
-                viewOffset = str(info['_children'][0]['viewOffset'])
-                Log.Debug(sessionKey + " - " + state + ' - ' + viewOffset)
-                Scrobble(sessionKey,state,viewOffset)
+            #try:	
+			if info['type'] == "playing":
+				sessionKey = str(info['_children'][0]['sessionKey'])
+				state = str(info['_children'][0]['state'])
+				viewOffset = str(info['_children'][0]['viewOffset'])
+				Log.Debug(sessionKey + " - " + state + ' - ' + viewOffset)
+				Scrobble(sessionKey,state,viewOffset)
             
-            #adding to collection
-            elif info['type'] == "timeline" and Dict['new_sync_collection']:
-                if (info['_children'][0]['type'] == 1 or info['_children'][0]['type'] == 4) and info['_children'][0]['state'] == 0:
-                    Log.Info("New File added to Libray: " + info['_children'][0]['title'] + ' - ' + str(info['_children'][0]['itemID']))
-                    itemID = info['_children'][0]['itemID']
-                    # delay sync to wait for metadata
-                    #Thread.CreateTimer(120, CollectionSync,True,itemID,'add')
-                    
-                # #deleted file (doesn't work yet)
-                elif (info['_children'][0]['type'] == 1 or info['_children'][0]['type'] == 4) and info['_children'][0]['state'] == 9:
-                    Log.Info("File deleted from Libray: " + info['_children'][0]['title'] + ' - ' + str(info['_children'][0]['itemID']))
-                #     itemID = info['_children'][0]['itemID']
-                #     # delay sync to wait for metadata
-                #     CollectionSync(itemID,'delete')
-                
+			
+			#adding to collection
+			elif info['type'] == "timeline" and Dict['new_sync_collection']:
+				if (info['_children'][0]['type'] == 1 or info['_children'][0]['type'] == 4) and info['_children'][0]['state'] == 0:
+					Log.Info("New File added to Libray: " + info['_children'][0]['title'] + ' - ' + str(info['_children'][0]['itemID']))
+					itemID = info['_children'][0]['itemID']
+					
+					# delay sync to wait for metadata
+					#Thread.CreateTimer(120, CollectionSync,True,itemID,'add')
+					
+			# #deleted file (doesn't work yet)
+			elif (info['_children'][0]['type'] == 1 or info['_children'][0]['type'] == 4) and info['_children'][0]['state'] == 9:
+				Log.Info("File deleted from Libray: " + info['_children'][0]['title'] + ' - ' + str(info['_children'][0]['itemID']))
+			#     itemID = info['_children'][0]['itemID']
+			#     # delay sync to wait for metadata
+			#     CollectionSync(itemID,'delete')
+			#except Exception, e:
+			#	Log.Error('Error in socket listen %s.' % e.reason[0])
+			#	return
     return
 
 ####################################################################################################
