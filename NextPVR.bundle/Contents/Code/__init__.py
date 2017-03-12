@@ -81,13 +81,14 @@ def MainMenu():
     #http://192.168.1.100:8866/streamer/vlc/stream.aspx?url=/live?channel=3
     #dir.add(
 	#	CreateVideoClipObject(
-	#		url = PVR_URL + 'live?channel=3',
+	#		url = PVR_URL + 'services/service?method=channel.transcode.initiate&channel_id=7224&profile=720p-1024kbps',
 	#		title = 'TestLive3',
-	#		rating_key=1,
+	#		summary='summary',
+	#		rating_key=float(3),
 	#		channel=3
 	#		)
 	#	)
-    #Log('MainMenu: Live Menu Added')
+    Log('MainMenu: Live Menu Added')
     dir.add(PrefsObject(title="Preferences", summary="Configure how to connect to NextPVR", thumb=R("icon-prefs.png")))
     Log('MainMenu: URL set to %s' % PVR_URL)
     return dir
@@ -360,17 +361,17 @@ def CreateVideoObject(url, title, summary, rating_key, playback_position, origin
 		title = unwatchedstring + title ,
 		summary = playbackstring + ' ' + summary,
 		originally_available_at = Datetime.ParseDate(originally_available_at),
-		duration = int(duration),
+		duration = int(3600),
 		rating_key=float(rating_key),
 		thumb = Resource.ContentsOfURLWithFallback(url=showthumb, fallback='icon-default.png'),
 		items = [
 			MediaObject(
 				parts = [
-					PartObject(key=url)
+					PartObject(key=Callback(PlayVideo, url=url))
 				],
 				container = container,
-				video_codec = VideoCodec.H264,
-				#audio_codec = "AAC",
+				#video_codec = VideoCodec.H264,
+				#audio_codec = "AC3",
                 #audio_channels = 2,
 				optimized_for_streaming = True
 			)
@@ -384,6 +385,7 @@ def CreateVideoObject(url, title, summary, rating_key, playback_position, origin
 
 ####################################################################################################
 @route('/video/nextpvr/videoclipobject')
+#def CreateVideoClipObject(url, title, summary, rating_key, channel=None, container='mp2ts', include_container=False, includeRelated=False,**kwargs):
 def CreateVideoClipObject(url, title, summary, rating_key, channel=None, container='mp2ts', include_container=False, includeRelated=False,**kwargs):
 	
 	showthumb = PVR_URL + 'service?method=recording.artwork&recording_id=%s&sid=plex' % str(rating_key)
@@ -395,25 +397,69 @@ def CreateVideoClipObject(url, title, summary, rating_key, channel=None, contain
 
 	Log('CreateVideoClipObject: Playvideo: %s' % url)
 	track_object = EpisodeObject(
-		key = Callback(CreateVideoClipObject, url=url, title=title, summary=summary, rating_key=rating_key,channel=channel,container=container,include_container=True, includeRelated=False),
+		key = Callback(CreateVideoClipObject, url=url, title=title, summary=summary, rating_key=rating_key,channel=channel,container=container,include_container=True, includeRelated=True),
 		title = title ,
 		summary = summary,
 		originally_available_at = datetime.datetime.now(),
-		duration = int(3600000),
+		duration = int(3600),
 		rating_key=float(rating_key),
 		thumb = Resource.ContentsOfURLWithFallback(url=thumb, fallback='icon-default.png'),
 		items = [
 			MediaObject(
 				parts = [
-					PartObject(key=url)
+					PartObject(key=Callback(PlayVideo, url=url))
 				],
 				container = container,
 				#video_resolution = 128,
 				video_codec = VideoCodec.H264,
-				#audio_codec = "AAC",
-                #audio_channels = 2,
+				#video_codec = 'h264',
+				audio_codec = 'aac_latm',
+				audio_channels=2,
+				#bitrate = 13000,
+				#video_resolution=480,
 				optimized_for_streaming = True
 			)
+			#,
+			# MediaObject(
+                    # parts = [PartObject(key=Callback(PlayVideo, url=url))],
+					# container = container,
+                    # video_resolution = 1080,
+                    # bitrate = 8000, #8000 #12000
+                    # video_codec = VideoCodec.H264,
+                    # audio_codec = "aac_latm",
+                    # audio_channels = 2,
+                    # optimized_for_streaming = True
+                # ),
+                # MediaObject(
+                    # parts = [PartObject(key=Callback(PlayVideo, url=url))],
+					# container = container,
+                    # video_resolution = 720,
+                    # bitrate = 2000, #2000 #8000
+                    # video_codec = VideoCodec.H264,
+                    # audio_codec = "aac_latm",
+                    # audio_channels = 2,
+                    # optimized_for_streaming = True
+                # ),
+                # MediaObject(
+                    # parts = [PartObject(key=Callback(PlayVideo, url=url))],
+                    # container = container,
+                    # video_resolution = 480,
+                    # bitrate = 1500, #1500 #2000
+                    # video_codec = VideoCodec.H264,
+                    # audio_codec = "aac_latm",
+                    # audio_channels = 2,
+                    # optimized_for_streaming = True
+                # ),
+                # MediaObject(
+                    # parts = [PartObject(key=Callback(PlayVideo, url=url))],
+                    # container = container,
+                    # video_resolution = 240,
+                    # bitrate = 720, # 720 #1500
+                    # video_codec = VideoCodec.H264,
+                    # audio_codec = "aac_latm",
+                    # audio_channels = 2,
+                    # optimized_for_streaming = True
+                # )
 		]
 	)
 	#track_object = VideoClipObject(
@@ -445,7 +491,7 @@ def CreateVideoClipObject(url, title, summary, rating_key, channel=None, contain
 		return track_object
 		
 @route('/video/nextpvr/playvideo')
-def PlayVideo(channel,url):
+def PlayVideo(url):
 	# Tune in to the stream
 	Log('Playvideo method redirecting to : ' + url)
 	return Redirect(url)

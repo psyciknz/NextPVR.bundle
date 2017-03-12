@@ -5,10 +5,12 @@
 	<key>CFBundleIdentifier</key>
 	<string>com.dcSoftware.plexapp.nextpvr</string>
 	<key>PlexClientPlatforms</key>
-	<string>Android,iOS,Roku,Safari,Firefox,Chrome</string>
+	<string>*</string>
 	<key>PlexFrameworkVersion</key>
 	<string>2</string>
 	<key>PlexPluginCodePolicy</key>
 	<string>Elevated</string>
+	<key>PlexPluginMode</key>
+	<string>Daemon</string>
 	</dict>
 </plist>

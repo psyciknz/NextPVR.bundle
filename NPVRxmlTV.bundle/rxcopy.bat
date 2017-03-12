@@ -1,0 +1,1 @@
+xcopy Contents "C:\Documents and Settings\Administrator\Local Settings\Application Data\Plex Media Server\Plug-ins\NPVRxmlTV.bundle\Contents" /s /d /q
