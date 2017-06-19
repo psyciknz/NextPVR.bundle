@@ -27,6 +27,25 @@
         "type": "text",
         "label": "Pending Days",
         "default": "10"
+    },
+	{
+        "id": "titleformat",
+        "type": "enum",
+        "label": "Format for the live TV entry",
+		"values": ["","Programme Name","Channel + Programme Name","Channel + Channel Callsign + Programme Name","Call Sign + Programme Name"],
+        "default": ""
+    },
+	{
+        "id": "mainmenu",
+        "type": "enum",
+        "label": "Default option for the main menu",
+		"values": ["All","Live","Channel Group (set below)","Channel Group List"],
+        "default": "All"
+    },
+	{
+        "id": "channelgroup",
+        "type": "text",
+        "label": "Channel Group for channel list ",
+        "default": ""
     }
-
 ]
