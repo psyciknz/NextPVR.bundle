@@ -1,0 +1,14 @@
+[
+  {
+    "id":"debug",
+    "label":"enable debug logging",
+    "type":"bool",
+    "default":"false"
+  },
+  {
+    "id":"plextoken",
+    "label":"Plex token for auths",
+    "type":"text",
+    "default":"replace me"
+  }
+ ]

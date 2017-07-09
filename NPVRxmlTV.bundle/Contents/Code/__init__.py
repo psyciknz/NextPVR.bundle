@@ -6,6 +6,8 @@
 #
 import os, re, time, datetime
 
+plextoken = ''
+
 class npvrxml(Agent.TV_Shows):
 	name = 'NPVR TV .xml Importer'
 	ver = '0.1'
@@ -17,19 +19,33 @@ class npvrxml(Agent.TV_Shows):
              Locale.Language.Portuguese, Locale.Language.Russian, Locale.Language.Slovak, Locale.Language.Swedish,
              Locale.Language.Thai, Locale.Language.Turkish, Locale.Language.Vietnamese, Locale.Language.Chinese,
              Locale.Language.Korean]
-	accepts_from = ['com.plexapp.agents.localmedia','com.plexapp.agents.thetvdb']
+	accepts_from = ['com.plexapp.agents.localmedia','com.plexapp.agents.thetvdb','com.plexapp.agents.opensubtitles','com.plexapp.agents.podnapisi','com.plexapp.agents.plexthememusic','com.plexapp.agents.subzero']
+	fallback_agent = ['com.plexapp.agents.thetvdb']
+	
 	
 		
 	def Start():
 		Log("Start")
+		
 		pass
 
 	def search(self, results, media, lang):
-		Log("Searching")
-		pageUrl="http://localhost:32400/library/metadata/" + media.id + "/tree" 
-		page=HTTP.Request(pageUrl)
-		Log(media.primary_metadata)
-		Log("Search: Curent media name: " + media.name)
+		if Prefs['plextoken']:
+			plextoken = "?X-Plex-Token={0}".format(Prefs['plextoken'])
+			Log("Found plex token: " + plextoken)
+		else:
+			plextoken = ""
+			
+		Log("No Plex token found")
+		Log("Searching: plex token: " + plextoken)
+		pageUrl="http://localhost:32400/library/metadata/" + media.id + "/tree{0}".format(plextoken)
+		#page=HTTP.Request(pageUrl)
+		#Log(media.primary_metadata)
+		if not media is None:
+			Log("Search: Curent media name: " + media.name)
+		else:
+			Log("Search: Empty media found")
+			
 		Log(XML.ElementFromURL(pageUrl).xpath('//MediaContainer/MetadataItem/MetadataItem/MetadataItem/MetadataItem'))
 		npvrXML = XML.ElementFromURL(pageUrl).xpath('//MediaContainer/MetadataItem/MetadataItem/MetadataItem/MediaItem/MediaPart')[0]
 		path1 = String.Unquote(npvrXML.get('file'))
@@ -83,7 +99,13 @@ class npvrxml(Agent.TV_Shows):
 			results.Append(MetadataSearchResult(id=media.id, name=media.name, year=time.localtime(mod_time)[0], lang=lang, score=100))
 			
 	def update(self, metadata, media, lang):
-		Log("Update: Media ID = " + media.id + " Metadata ID = " + metadata.id)
+		if Prefs['plextoken']:
+			plextoken = "?X-Plex-Token={0}".format(Prefs['plextoken'])
+			Log("Found plex token: " + plextoken)
+		else:
+			plextoken = ""
+			
+		Log("Update: Media ID = " + media.id + " Metadata ID = " + metadata.id +  " plex token: " + plextoken)
 		#Log('Dumping self')
 		#dumpvar(obj=self)
 		#Log('Dumping Media')
@@ -92,8 +114,8 @@ class npvrxml(Agent.TV_Shows):
 		#dumpvar(obj=metadata)
 		id = media.id
 		Log('Update: Update called for TV Show with id = ' + id + ' Media.title: ' + media.title + " GIUD: " + metadata.guid )
-		pageUrl = "http://localhost:32400/library/metadata/" + id + "/tree"
-		page = HTTP.Request(pageUrl)
+		pageUrl = "http://localhost:32400/library/metadata/" + id + "/tree{0}".format(plextoken)
+		#page = HTTP.Request(pageUrl)
 		xml = XML.ElementFromURL(pageUrl)
 		metasplit = metadata.guid.replace('?','/').split('/')
 		#Log("Guid Split Count: " + len(metasplit))
@@ -284,8 +306,14 @@ class npvrxml(Agent.TV_Shows):
 		# Grabs the season data
 		@parallelize
 		def UpdateEpisodes():
-			Log("UpdateEpisodes called")
-			pageUrl="http://localhost:32400/library/metadata/" + metadata.id + "/children"
+			if Prefs['plextoken']:
+				plextoken = "?X-Plex-Token={0}".format(Prefs['plextoken'])
+				Log("Found plex token: " + plextoken)
+			else:
+				plextoken = ""
+			
+			Log("UpdateEpisodes called plex token: " + plextoken)
+			pageUrl="http://localhost:32400/library/metadata/" + metadata.id + "/children{0}".format(plextoken)
 			seasonList = XML.ElementFromURL(pageUrl).xpath('//MediaContainer/Directory')
 
 			seasons=[]
@@ -304,7 +332,8 @@ class npvrxml(Agent.TV_Shows):
 				
 					Log("Finding episodes")
 
-					pageUrl="http://localhost:32400" + seasonID
+					pageUrl="http://localhost:32400" + seasonID + plextoken
+					Log("UpdateEpisodes: Page URl: " + pageUrl)
 
 					episodes = XML.ElementFromURL(pageUrl).xpath('//MediaContainer/Video')
 					Log("UpdateEpisodes: Found " + str(len(episodes)) + " episodes.")
@@ -325,7 +354,8 @@ class npvrxml(Agent.TV_Shows):
 						def UpdateEpisode(episode=episode, season_num=season_num, ep_num=ep_num, ep_key=ep_key, path=path1):
 							Log("UpdateEpisode called for episode S" + str(season_num) + "E" + str(ep_num))
 							if(ep_num.count('allLeaves') == 0):
-								pageUrl="http://localhost:32400" + ep_key + "/tree"
+								pageUrl="http://localhost:32400" + ep_key + "/tree{0}".format(plextoken)
+								Log('UpdateEpisode: UPDATE: ' + pageUrl)
 								path1 = XML.ElementFromURL(pageUrl).xpath('//MediaPart')[0].get('file')
 								Log('UpdateEpisode: UPDATE: ' + path1)
 								filepath=path1.split
