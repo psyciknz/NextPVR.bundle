@@ -7,10 +7,13 @@
 import os, re, time, datetime
 
 plextoken = ''
+TVDB_SERIE_SEARCH            = 'http://thetvdb.com/api/GetSeries.php?seriesname={0}'                                                 #
+TVDB_IMAGES_URL              = 'http://thetvdb.com/banners/'                                                                      # TVDB picture directory
+        
 
 class npvrxml(Agent.TV_Shows):
 	name = 'NPVR TV .xml Importer'
-	ver = '0.1'
+	ver = '0.2'
 	primary_provider = True
 	languages = [Locale.Language.NoLanguage, Locale.Language.English, Locale.Language.Czech, Locale.Language.Danish, Locale.Language.German,
              Locale.Language.Greek, Locale.Language.Spanish, Locale.Language.Finnish, Locale.Language.French,
@@ -20,6 +23,7 @@ class npvrxml(Agent.TV_Shows):
              Locale.Language.Thai, Locale.Language.Turkish, Locale.Language.Vietnamese, Locale.Language.Chinese,
              Locale.Language.Korean]
 	accepts_from = ['com.plexapp.agents.localmedia','com.plexapp.agents.thetvdb','com.plexapp.agents.opensubtitles','com.plexapp.agents.podnapisi','com.plexapp.agents.plexthememusic','com.plexapp.agents.subzero']
+	contributes_to = ['com.plexapp.agents.thetvdb']
 	fallback_agent = ['com.plexapp.agents.thetvdb']
 	
 	
@@ -31,12 +35,17 @@ class npvrxml(Agent.TV_Shows):
 
 	def search(self, results, media, lang):
 		if Prefs['plextoken']:
-			plextoken = "?X-Plex-Token={0}".format(Prefs['plextoken'])
-			Log("Found plex token: " + plextoken)
+			if not Prefs['plextoken'] == 'replace me':
+				plextoken = "?X-Plex-Token={0}".format(Prefs['plextoken'])
+				Log("Found plex token: " + plextoken)
+			else:
+				plextoken = ""
+				Log("Default plex token found")
 		else:
+			Log("No plex token found")
 			plextoken = ""
 			
-		Log("No Plex token found")
+		
 		Log("Searching: plex token: " + plextoken)
 		pageUrl="http://localhost:32400/library/metadata/" + media.id + "/tree{0}".format(plextoken)
 		#page=HTTP.Request(pageUrl)
@@ -63,6 +72,7 @@ class npvrxml(Agent.TV_Shows):
 			year = 0
 			Log("Search: Media Name: %s id: %s" % (media.name,media.id))
 			tvshowname = media.name
+		
 			Log("Search: Checking for <recording> tag")	
 			if nfoTextLower.count('<recording') > 0 and nfoTextLower.count('</recording>') > 0:
 				Log('Found the tag, likely an NPVR XML file')	
@@ -100,9 +110,14 @@ class npvrxml(Agent.TV_Shows):
 			
 	def update(self, metadata, media, lang):
 		if Prefs['plextoken']:
-			plextoken = "?X-Plex-Token={0}".format(Prefs['plextoken'])
-			Log("Found plex token: " + plextoken)
+			if not Prefs['plextoken'] == 'replace me':
+				plextoken = "?X-Plex-Token={0}".format(Prefs['plextoken'])
+				Log("Found plex token: " + plextoken)
+			else:
+				plextoken = ""
+				Log("Default plex token found")
 		else:
+			Log("No plex token found")
 			plextoken = ""
 			
 		Log("Update: Media ID = " + media.id + " Metadata ID = " + metadata.id +  " plex token: " + plextoken)
@@ -118,6 +133,13 @@ class npvrxml(Agent.TV_Shows):
 		#page = HTTP.Request(pageUrl)
 		xml = XML.ElementFromURL(pageUrl)
 		metasplit = metadata.guid.replace('?','/').split('/')
+		
+		#doesn't work.
+		#tvdb_id = ""
+		#tvdb_id = Core.messaging.call_external_function('com.plexapp.agents.thetvdb','MessageKit:GetTvdbId')
+		#if not tvdb_id is None:
+		#	Log("Search TVDB ID: " + tvdb_id)
+		
 		#Log("Guid Split Count: " + len(metasplit))
 		# if len(metasplit) > 4: 
 			# Log("Looking at an episode GUID")
@@ -205,12 +227,17 @@ class npvrxml(Agent.TV_Shows):
 					return
 
 				#summary
+				Log('Update: Getting Episode summary from xml file')
 				metadata.summary = "Summary text"
+				Log('Update: Episode summary set to ' + metadata.summary)
 				try: metadata.summary = npvrXML.xpath('./description')[0].text
 				except:
 					Log('Update: No summary posted to episode: ' + xmlFile)
-					metadata.summary = metadata.title
+					metadata.summary = "n/a"
 					pass
+				if  not metadata.summary:
+					metadata.summary = "n/a"
+					
 				Log('Update: Episode summary set to ' + metadata.summary)
 				#year
 				try:
@@ -243,9 +270,12 @@ class npvrxml(Agent.TV_Shows):
 				#title_o = media.title
 				try: title = npvrXML.xpath('./title')[0].text
 				except: pass
+				
 				if (not ep_name):
+					Log('Using Title')
 					metadata.title = title
 				else:
+					Log('Using ep_name')
 					metadata.title = ep_name
 					
 				Log('Episode parent title set to : ' + metadata.title)
@@ -307,9 +337,14 @@ class npvrxml(Agent.TV_Shows):
 		@parallelize
 		def UpdateEpisodes():
 			if Prefs['plextoken']:
-				plextoken = "?X-Plex-Token={0}".format(Prefs['plextoken'])
-				Log("Found plex token: " + plextoken)
+				if not Prefs['plextoken'] == 'replace me':
+					plextoken = "?X-Plex-Token={0}".format(Prefs['plextoken'])
+					Log("Found plex token: " + plextoken)
+				else:
+					plextoken = ""
+					Log("Default plex token found")
 			else:
+				Log("No plex token found")
 				plextoken = ""
 			
 			Log("UpdateEpisodes called plex token: " + plextoken)
@@ -413,8 +448,11 @@ class npvrxml(Agent.TV_Shows):
 										try: episode.summary = npvrXML.xpath('./description')[0].text
 										except:
 											Log('UpdateEpisode: No summary posted to episode: ' + xmlFile)
-											episode.summary = episode.title
+											episode.summary = "n/a"
 											pass
+										if not episode.summary:
+											episode.summary = "n/a"
+											
 										Log('UpdateEpisode: Episode summary set to ' + episode.summary)
 										#year
 										try:

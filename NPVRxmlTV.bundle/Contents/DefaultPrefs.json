@@ -1,5 +1,11 @@
 [
   {
+        "id": "version",
+        "type": "text",
+        "label": "Version Number (no need to change)",
+        "default": "0.5.0" 
+  },
+  {
     "id":"debug",
     "label":"enable debug logging",
     "type":"bool",
