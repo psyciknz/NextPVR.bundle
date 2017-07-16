@@ -17,8 +17,6 @@
 import xml.etree.ElementTree as ET
 import datetime
 import urllib2
-import websocket
-import ast
 import json
 ####################################################################################################
 VIDEO_PREFIX = "/video/nextpvr"
