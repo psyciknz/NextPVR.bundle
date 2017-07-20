@@ -10,3 +10,6 @@ Live - Lists channels and the current show - requires a working EPG (in nextpvr)
 Channel List - Using a named channel group (defined in nextpvr) to list channels and ignoring the EPG.  Useful for a Hauppauge Colossus.
 Channel Group List - lists all the channel groups and the channels for each.
 Whats New - New recordings
+
+
+For the agent and scanner see: https://github.com/psyciknz/NPVRXML-Plex
