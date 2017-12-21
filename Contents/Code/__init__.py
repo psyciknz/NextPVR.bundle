@@ -21,7 +21,7 @@ import json
 ####################################################################################################
 VIDEO_PREFIX = "/video/nextpvr"
 
-ver = "0.5"
+ver = "0.6"
 NAME = "NextPVR"
 ART  = 'item-default.png'
 ICON     = 'icon-default.png'
@@ -393,7 +393,7 @@ def WhatsNewRecordingsMenu():
 ####################################################################################################
 @route('/video/nextpvr/videoclipobject')
 #def CreateVideoClipObject(url, title, summary, rating_key,call_sign='',  channel=None, container='mp2ts', include_container=False, includeRelated=False,includeRelatedCount=False,includeBandwidths=True):
-def CreateVideoClipObject(url, title, summary, rating_key, originally_available_at,  call_sign='',channel=None, container='mp2ts', include_container=False, includeRelated=False,includeRelatedCount=False,includeBandwidths=True, duration=3600):
+def CreateVideoClipObject(url, title, summary, rating_key, originally_available_at,  call_sign='',channel=None, container='mp2ts', include_container=False, includeRelated=False,includeRelatedCount=False,includeBandwidths=True, duration=3600,offset=0):
 	
 	showthumb = PVR_URL + 'service?method=recording.artwork&recording_id=%s&sid=plex' % str(rating_key)
 	Log('CreateVideoClipObject Getting artwork url "%s"' % showthumb)
@@ -420,13 +420,14 @@ def CreateVideoClipObject(url, title, summary, rating_key, originally_available_
 		originally_available_at_date=originally_available_at
 		
 	track_object = EpisodeObject(
-		key = Callback(CreateVideoClipObject, url=url, title=title, summary=summary, rating_key=rating_key,originally_available_at=originally_available_at,call_sign=call_sign,channel=channel,container=container,include_container=True, includeRelated=False,includeRelatedCount=False,includeBandwidths=True,duration=duration),
+		key = Callback(CreateVideoClipObject, url=url, title=title, summary=summary, rating_key=rating_key,originally_available_at=originally_available_at,call_sign=call_sign,channel=channel,container=container,include_container=True, includeRelated=False,includeRelatedCount=False,includeBandwidths=True,duration=duration,offset=0),
 		title = title ,
 		summary = summary,
 		originally_available_at = datetime.datetime.now(),
 		duration = int(duration),
 		rating_key=float(rating_key),
 		thumb = Resource.ContentsOfURLWithFallback(url=thumb, fallback='icon-default.png'),
+		
 		items = [
 			MediaObject(
 				parts = [
