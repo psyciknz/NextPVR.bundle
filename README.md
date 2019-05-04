@@ -1,6 +1,8 @@
 NextPVR-Plex
 ============
 
+*NOTE*: Not maintained anymore, since I've stopped using NextPVR and with Plex.TV not really supporting plugins any more.  If yours is still going thats great.
+
 Plex Channel for viewing NextPVR content.  Has the ability to stream live TV in any tuner supported by http://nextpvr.com (which is almost any BDA enabled tuner).
 
 The Plex channel has it's own log in Plex Media Server\Logs\PMS Plugin Logs\com.plexapp.agents.nextpvr.log.  This will normally be needed for any issues.
